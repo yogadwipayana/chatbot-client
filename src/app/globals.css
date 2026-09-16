@@ -1,0 +1,85 @@
+/*
+ * Token tampilan meniru AdminLTE 2 "skin-red-light", tema yang dipakai SADS.
+ * Gaya per komponen ada di berkas *.module.css masing-masing.
+ */
+:root {
+  --red: #dd4b39;
+  --red-dark: #d73925;
+  --red-darker: #c23321;
+  --green: #00a65a;
+  --green-dark: #008d4c;
+  --yellow: #f39c12;
+  --aqua: #00c0ef;
+  --blue: #3c8dbc;
+
+  --text: #333;
+  --text-soft: #444;
+  --muted: #777;
+  --border: #d2d6de;
+  --border-light: #f4f4f4;
+  --content-bg: #ecf0f5;
+  --sidebar-bg: #f9fafc;
+
+  --sidebar-width: 230px;
+  --header-height: 50px;
+}
+
+@media (max-width: 767px) {
+  :root {
+    /* Logo dan navbar bertumpuk di layar sempit. */
+    --header-height: 100px;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.42857143;
+  color: var(--text);
+  background: var(--content-bg);
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

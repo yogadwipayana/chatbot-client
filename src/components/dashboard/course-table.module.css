@@ -1,0 +1,104 @@
+.wrapper {
+  padding: 15px;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border-light);
+  font-size: 16px;
+}
+
+.table th,
+.table td {
+  border: 1px solid var(--border-light);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  padding: 0;
+  border-bottom-width: 2px;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 10px 12px;
+}
+
+/* Nama matakuliah dan jadwal tetap satu baris seperti di SADS; kalau ruangnya
+   kurang, pembungkusnya yang menggeser mendatar. */
+.table td:first-child,
+.schedule li {
+  white-space: nowrap;
+}
+
+.table tbody tr:nth-child(odd) {
+  background: #f9f9f9;
+}
+
+.sortButton {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  font-weight: 700;
+  text-align: left;
+}
+
+.sortIcon {
+  flex: none;
+  font-size: 18px;
+  opacity: 0.2;
+}
+
+.sorted .sortIcon {
+  opacity: 0.6;
+}
+
+.schedule {
+  margin: 0;
+  padding: 0;
+  list-style-position: inside;
+}
+
+.center {
+  text-align: center !important;
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 35px;
+  height: 28px;
+  border: 1px solid;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 13px;
+}
+
+.markOk {
+  border-color: var(--green-dark);
+  background: var(--green);
+}
+
+.markPending {
+  border-color: var(--red-dark);
+  background: var(--red);
+}
+
+@media (max-width: 767px) {
+  .wrapper {
+    padding: 5px 0;
+  }
+
+  .table {
+    font-size: 14px;
+  }
+}

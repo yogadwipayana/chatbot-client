@@ -1,0 +1,108 @@
+.header {
+  position: relative;
+  z-index: 1030;
+  display: flex;
+  height: 50px;
+  background: var(--red);
+  color: #fff;
+}
+
+.logo {
+  flex: 0 0 var(--sidebar-width);
+  height: 50px;
+  padding: 0 15px;
+  overflow: hidden;
+  font-size: 20px;
+  line-height: 50px;
+  text-align: center;
+  white-space: nowrap;
+  color: #fff;
+  transition: background-color 0.15s;
+}
+
+.logo:hover {
+  background: var(--red-dark);
+}
+
+.navbar {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  height: 50px;
+  padding: 0 15px;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 16px;
+}
+
+.toggle:hover,
+.link:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  margin-left: auto;
+}
+
+.role {
+  position: relative;
+  margin-right: 5px;
+}
+
+.role select {
+  height: 34px;
+  padding: 6px 34px 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  appearance: none;
+}
+
+.role select option {
+  color: var(--text);
+}
+
+.role svg {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  font-size: 14px;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.link {
+  display: block;
+  padding: 15px;
+  line-height: 20px;
+  color: #fff;
+}
+
+@media (max-width: 767px) {
+  .header {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .logo {
+    flex-basis: auto;
+    width: 100%;
+  }
+
+  .navbar {
+    height: 50px;
+  }
+}
