@@ -285,6 +285,14 @@
   list-style: none;
 }
 
+/* Ukuran minimum item grid adalah min-content, dan judul sumber tidak pernah
+   dibungkus. Tanpa ini, judul panjang -- pertanyaan pada sumber tanya jawab
+   hampir selalu panjang -- melebarkan kartu keluar panel alih-alih dipotong
+   ellipsis seperti yang sudah disiapkan `.citationTitle`. */
+.citations li {
+  min-width: 0;
+}
+
 .citation {
   display: flex;
   align-items: center;
@@ -306,6 +314,16 @@
   color: var(--red);
 }
 
+/* Sumber tanya jawab tidak dapat dibuka: tanpa sorotan yang menjanjikan klik. */
+.citationStatic:hover {
+  border-color: var(--border);
+}
+
+.qaIcon {
+  flex: none;
+  color: var(--blue);
+}
+
 .citationTitle {
   flex: 1;
   min-width: 0;
@@ -319,6 +337,30 @@
   flex: none;
   font-size: 12px;
   color: var(--muted);
+}
+
+/* Kartu berisi beberapa tautan halaman, jadi kartunya sendiri tidak dapat
+   diklik: sorotan tepi yang menjanjikan klik pindah ke nomor halamannya. */
+.citationGrouped:hover {
+  border-color: var(--border);
+}
+
+.citationPages {
+  flex: none;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.pageLink {
+  padding: 0 1px;
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pageLink:hover,
+.pageLink:focus-visible {
+  color: var(--red);
 }
 
 .externalIcon {

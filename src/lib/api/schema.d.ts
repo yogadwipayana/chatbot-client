@@ -319,6 +319,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/faq": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar entri tanya jawab
+         * @description Entri tanya jawab adalah satu pasang pertanyaan dan jawaban yang diketik
+         *     admin langsung di dashboard, tanpa berkas PDF sama sekali.
+         *
+         *     Chatbot memperlakukannya persis seperti dokumen: ikut terambil retrieval
+         *     hibrida, ikut berhenti dipakai saat `valid_until` lewat (FR-2), dan ikut
+         *     menjadi kartu sitasi -- dengan `jenis: tanya_jawab`, sehingga frontend
+         *     tahu tidak ada berkas yang bisa dibuka.
+         *
+         *     Inilah jalan tercepat menutup pertanyaan tak terjawab (AD-4): tidak
+         *     semua jawaban perlu menunggu dokumen resmi terbit lebih dulu.
+         *
+         *     Staf/dosen hanya melihat entri unitnya, sama seperti dokumen, dan
+         *     `total` pun dihitung atas unit itu.
+         */
+        get: operations["list_faq"];
+        put?: never;
+        /**
+         * Tambah entri tanya jawab
+         * @description Sinkron seperti unggah dokumen: entri disimpan, dipecah menjadi chunk,
+         *     dan di-embed dalam satu transaksi. Begitu balasan 201 diterima, chatbot
+         *     sudah dapat memakainya pada pertanyaan berikutnya.
+         *
+         *     Tulis pertanyaannya seperti mahasiswa akan menanyakannya -- kalimat itu
+         *     ikut diindeks dan ikut tampil sebagai judul sumber pada kartu sitasi.
+         *
+         *     Jawaban panjang dipecah menjadi beberapa chunk, dan setiap potongannya
+         *     tetap membawa pertanyaannya.
+         */
+        post: operations["create_faq"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/faq/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Hapus entri tanya jawab
+         * @description Permanen dan tidak dapat dibatalkan; frontend WAJIB meminta konfirmasi
+         *     (PRD §9). Untuk sekadar menghentikan pemakaiannya, pakai
+         *     `PATCH { "is_active": false }`.
+         */
+        delete: operations["delete_faq"];
+        options?: never;
+        head?: never;
+        /**
+         * Perbarui entri tanya jawab
+         * @description Mengubah `pertanyaan` atau `jawaban` membuang chunk lama dan menghitung
+         *     ulang embedding-nya dalam transaksi yang sama. Indeks yang masih memuat
+         *     kalimat versi lama akan menjawab mahasiswa dengan aturan yang sudah
+         *     dicabut -- persis risiko yang diangkat PRD §12.
+         *
+         *     `updated_at` diperbarui saat isi berubah (`pertanyaan`, `jawaban`,
+         *     `unit`, `valid_until`), tetapi tidak saat hanya `is_active` yang
+         *     berubah -- sama seperti dokumen.
+         */
+        patch: operations["update_faq"];
+        trace?: never;
+    };
     "/api/admin/unanswered": {
         parameters: {
             query?: never;
@@ -627,8 +706,18 @@ export interface components {
             halaman: number;
             /** Format: uuid */
             document_id: string;
-            /** @description Lintasan internal. Untuk ditampilkan, bukan untuk diakses langsung. */
+            /**
+             * @description Lintasan internal. Untuk ditampilkan, bukan untuk diakses langsung.
+             *     Kosong bila sumbernya entri tanya jawab, yang memang tak berberkas.
+             */
             file_path: string;
+            /**
+             * @description `tanya_jawab` berarti tidak ada PDF yang bisa dibuka dan nomor
+             *     halamannya tidak berarti apa-apa: tampilkan kartunya tanpa tautan
+             *     dan tanpa "hal. N".
+             * @default pdf
+             */
+            jenis: components["schemas"]["JenisDokumen"];
         };
         /** @description Isi banner eskalasi FE-3. */
         ContactOut: {
@@ -777,6 +866,67 @@ export interface components {
             halaman: number;
             urutan: number;
         };
+        /**
+         * @description Asal isi sebuah sumber. `pdf`: berkas resmi yang diunggah admin, punya
+         *     berkas yang dapat dibuka dan nomor halaman yang berarti. `tanya_jawab`:
+         *     diketik admin di dashboard, tanpa berkas -- kartu sumbernya tidak boleh
+         *     dibuat sebagai tautan.
+         * @enum {string}
+         */
+        JenisDokumen: "pdf" | "tanya_jawab";
+        FaqEntry: {
+            /** Format: uuid */
+            id: string;
+            /** @description Sekaligus judul sumber pada kartu sitasi yang dilihat mahasiswa. */
+            pertanyaan: string;
+            jawaban: string;
+            unit: string;
+            /**
+             * Format: date
+             * @description null berarti berlaku tanpa batas. Lewat tanggal ini, entri berhenti
+             *     terambil retrieval secara otomatis (FR-2).
+             */
+            valid_until?: string | null;
+            /** Format: date-time */
+            updated_at: string;
+            is_active: boolean;
+            /**
+             * @description Jawaban pendek menjadi satu potongan; jawaban panjang dipecah, dan
+             *     setiap potongan tetap membawa pertanyaannya.
+             */
+            jumlah_chunk: number;
+            /**
+             * @description Sama dengan dokumen: lebih dari 6 bulan tidak diperbarui, atau sudah
+             *     lewat masa berlaku.
+             */
+            stale: boolean;
+            /** @description Email admin yang terakhir menyimpannya. */
+            uploaded_by?: string | null;
+        };
+        FaqPage: {
+            items: components["schemas"]["FaqEntry"][];
+            /** @description Jumlah entri yang cocok dengan filter, untuk paginasi. */
+            total: number;
+        };
+        FaqEntryCreate: {
+            pertanyaan: string;
+            jawaban: string;
+            unit: string;
+            /** Format: date */
+            valid_until?: string | null;
+        };
+        /** @description Hanya field yang dikirim yang diubah. */
+        FaqEntryUpdate: {
+            pertanyaan?: string;
+            jawaban?: string;
+            unit?: string;
+            /**
+             * Format: date
+             * @description Kirim null untuk menjadikan entri berlaku tanpa batas.
+             */
+            valid_until?: string | null;
+            is_active?: boolean;
+        };
         UnansweredUpdate: {
             resolved: boolean;
         };
@@ -806,6 +956,8 @@ export interface components {
             /** Format: uuid */
             document_id?: string | null;
             judul: string;
+            /** @default pdf */
+            jenis: components["schemas"]["JenisDokumen"];
             halaman: number;
             konten: string;
             /** @description Skor gabungan. Berbasis peringkat -- jangan pakai untuk menilai relevansi. */
@@ -1555,6 +1707,133 @@ export interface operations {
             401: components["responses"]["TidakBerwenang"];
             403: components["responses"]["Terlarang"];
             404: components["responses"]["TidakDitemukan"];
+        };
+    };
+    list_faq: {
+        parameters: {
+            query?: {
+                include_inactive?: boolean;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Daftar entri tanya jawab */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FaqPage"];
+                };
+            };
+            401: components["responses"]["TidakBerwenang"];
+            403: components["responses"]["Terlarang"];
+        };
+    };
+    create_faq: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FaqEntryCreate"];
+            };
+        };
+        responses: {
+            /** @description Entri tersimpan dan terindeks */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FaqEntry"];
+                };
+            };
+            401: components["responses"]["TidakBerwenang"];
+            403: components["responses"]["Terlarang"];
+            422: components["responses"]["ValidationError"];
+            /**
+             * @description Layanan AI untuk menghitung embedding gagal. `detail` berisi kalimat
+             *     siap tampil yang menyarankan mencoba lagi; entri tidak tersimpan.
+             */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    delete_faq: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Terhapus */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["TidakBerwenang"];
+            403: components["responses"]["Terlarang"];
+            404: components["responses"]["TidakDitemukan"];
+        };
+    };
+    update_faq: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FaqEntryUpdate"];
+            };
+        };
+        responses: {
+            /** @description Tersimpan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FaqEntry"];
+                };
+            };
+            401: components["responses"]["TidakBerwenang"];
+            403: components["responses"]["Terlarang"];
+            404: components["responses"]["TidakDitemukan"];
+            422: components["responses"]["ValidationError"];
+            /** @description Layanan AI gagal saat mengindeks ulang; entri tidak berubah. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     list_unanswered: {
