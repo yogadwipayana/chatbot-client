@@ -1,4 +1,4 @@
-import { Fragment } from "react"
+import { Fragment, useState } from "react"
 import {
   FaExclamationTriangle,
   FaExternalLinkAlt,
@@ -16,7 +16,7 @@ import { citationUrl, type Citation, type Contact } from "@/lib/api/chat"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
-import type { ChatEntry } from "./use-chat"
+import type { ChatEntry, FeedbackControls, NoteState } from "./use-chat"
 
 type AssistantEntry = Extract<ChatEntry, { role: "assistant" }>
 
@@ -57,13 +57,11 @@ export function BotBubble({
 
 export function AssistantMessage({
   entry,
-  ratings,
-  onRate,
+  controls,
   showEscalation,
 }: {
   entry: AssistantEntry
-  ratings: Record<string, boolean>
-  onRate: (messageId: string, helpful: boolean) => void
+  controls: FeedbackControls
   /** false bila jawaban setelah ini sudah membawa banner kontak yang sama. */
   showEscalation: boolean
 }) {
@@ -80,6 +78,19 @@ export function AssistantMessage({
     )
   }
 
+  // FE-1: jawaban yang sedang mengalir. Tanpa sitasi dan tanpa tombol penilaian
+  // -- keduanya baru berarti setelah kalimat terakhirnya utuh, dan `message_id`
+  // yang dibutuhkan penilaian memang baru tiba bersama event penutup.
+  if (entry.state === "streaming") {
+    return (
+      <BotBubble>
+        <RichText text={entry.text} />
+        <span className={styles.caret} aria-hidden />
+        <span className="sr-only">Jawaban sedang ditulis</span>
+      </BotBubble>
+    )
+  }
+
   if (entry.state === "error") {
     return <BotBubble tone="error">{entry.message}</BotBubble>
   }
@@ -89,10 +100,7 @@ export function AssistantMessage({
   // meminta mahasiswa yang sedang tertekan menilai balasan tidak pantas.
   const dapatDinilai = response.kind === "answer" || response.kind === "refusal"
   const feedback = response.message_id && dapatDinilai && (
-    <Feedback
-      value={ratings[response.message_id]}
-      onRate={(helpful) => onRate(response.message_id!, helpful)}
-    />
+    <Feedback messageId={response.message_id} controls={controls} />
   )
 
   // FE-4: penolakan dan balasan dukungan tampil berbeda dari jawaban, dan tidak
@@ -307,34 +315,109 @@ function Escalation({ contacts }: { contacts: Contact[] }) {
 }
 
 function Feedback({
-  value,
-  onRate,
+  messageId,
+  controls,
 }: {
-  value: boolean | undefined
-  onRate: (helpful: boolean) => void
+  messageId: string
+  controls: FeedbackControls
 }) {
+  const value = controls.ratings[messageId]
+  const note = controls.notes[messageId]
   return (
-    <div className={styles.feedback}>
-      <span>Membantu?</span>
-      <button
-        type="button"
-        className={cx(styles.rate, value === true && styles.rateUp)}
-        aria-pressed={value === true}
-        aria-label="Ya, membantu"
-        onClick={() => onRate(true)}
-      >
-        {value === true ? <FaThumbsUp aria-hidden /> : <FaRegThumbsUp aria-hidden />}
-      </button>
-      <button
-        type="button"
-        className={cx(styles.rate, value === false && styles.rateDown)}
-        aria-pressed={value === false}
-        aria-label="Tidak membantu"
-        onClick={() => onRate(false)}
-      >
-        {value === false ? <FaThumbsDown aria-hidden /> : <FaRegThumbsDown aria-hidden />}
-      </button>
-    </div>
+    <>
+      <div className={styles.feedback}>
+        <span>Membantu?</span>
+        <button
+          type="button"
+          className={cx(styles.rate, value === true && styles.rateUp)}
+          aria-pressed={value === true}
+          aria-label="Ya, membantu"
+          onClick={() => controls.rate(messageId, true)}
+        >
+          {value === true ? <FaThumbsUp aria-hidden /> : <FaRegThumbsUp aria-hidden />}
+        </button>
+        <button
+          type="button"
+          className={cx(styles.rate, value === false && styles.rateDown)}
+          aria-pressed={value === false}
+          aria-label="Tidak membantu"
+          onClick={() => controls.rate(messageId, false)}
+        >
+          {value === false ? <FaThumbsDown aria-hidden /> : <FaRegThumbsDown aria-hidden />}
+        </button>
+      </div>
+      {note === "sent" ? (
+        <p className={styles.noteThanks} role="status">
+          Terima kasih, catatan Anda sudah terkirim.
+        </p>
+      ) : (
+        note && <NoteBox messageId={messageId} state={note} controls={controls} />
+      )}
+    </>
+  )
+}
+
+/**
+ * Kotak catatan yang menyertai 👎 (kolom `feedback.catatan`).
+ *
+ * Jempol ke bawah saja hanya memberi tahu admin bahwa ada yang salah, bukan
+ * apanya: daftar umpan balik AD-4 berisi baris tanpa keterangan yang harus
+ * ditebak satu per satu. Kotak ini muncul SETELAH penilaiannya terkirim, bukan
+ * sebagai syarat -- FE-5 tetap satu klik, dan mengabaikan kotak ini sama sekali
+ * tidak membatalkan apa pun.
+ */
+function NoteBox({
+  messageId,
+  state,
+  controls,
+}: {
+  messageId: string
+  state: NoteState
+  controls: FeedbackControls
+}) {
+  const [draft, setDraft] = useState("")
+  const sending = state === "sending"
+
+  return (
+    <form
+      className={styles.noteForm}
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (!sending) controls.submitNote(messageId, draft)
+      }}
+    >
+      <label htmlFor={`catatan-${messageId}`} className={styles.noteLabel}>
+        Apa yang kurang tepat? (opsional)
+      </label>
+      <textarea
+        id={`catatan-${messageId}`}
+        className={styles.noteInput}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        placeholder="Misalnya: jawabannya tidak menyebut biayanya"
+        rows={2}
+        maxLength={1000}
+        disabled={sending}
+      />
+      {state === "error" && (
+        <p className={styles.noteError} role="alert">
+          Catatan gagal terkirim. Coba lagi sebentar lagi — penilaian 👎 Anda sudah tercatat.
+        </p>
+      )}
+      <div className={styles.noteActions}>
+        <button type="submit" className={styles.noteSend} disabled={sending || !draft.trim()}>
+          {sending ? "Mengirim…" : "Kirim catatan"}
+        </button>
+        <button
+          type="button"
+          className={styles.noteSkip}
+          onClick={() => controls.dismissNote(messageId)}
+          disabled={sending}
+        >
+          Lewati
+        </button>
+      </div>
+    </form>
   )
 }
 

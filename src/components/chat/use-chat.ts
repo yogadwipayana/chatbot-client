@@ -9,8 +9,25 @@ import { getSessionId } from "@/lib/session"
 export type ChatEntry =
   | { id: number; role: "user"; text: string }
   | { id: number; role: "assistant"; state: "pending"; stage: string | null }
+  | { id: number; role: "assistant"; state: "streaming"; text: string }
   | { id: number; role: "assistant"; state: "done"; reply: StreamedReply }
   | { id: number; role: "assistant"; state: "error"; message: string }
+
+/**
+ * Keadaan kotak catatan 👎 (FE-5) untuk satu jawaban.
+ *
+ * `undefined` -- tidak ada kotak sama sekali -- adalah keadaan normal: penilaian
+ * tetap satu klik, dan kotaknya baru muncul setelah jempol ke bawah ditekan.
+ */
+export type NoteState = "open" | "sending" | "sent" | "error"
+
+export type FeedbackControls = {
+  ratings: Record<string, boolean>
+  notes: Record<string, NoteState>
+  rate: (messageId: string, helpful: boolean) => void
+  submitNote: (messageId: string, catatan: string) => void
+  dismissNote: (messageId: string) => void
+}
 
 /** Server hanya memakai 3 pesan terakhir untuk penulisan ulang query (FR-4). */
 const HISTORY_LIMIT = 3
@@ -18,12 +35,16 @@ const HISTORY_LIMIT = 3
 export function useChat() {
   const [entries, setEntries] = useState<ChatEntry[]>([])
   const [ratings, setRatings] = useState<Record<string, boolean>>({})
+  const [notes, setNotes] = useState<Record<string, NoteState>>({})
   const controller = useRef<AbortController | null>(null)
   const nextId = useRef(0)
 
   useEffect(() => () => controller.current?.abort(), [])
 
-  const busy = entries.some((entry) => entry.role === "assistant" && entry.state === "pending")
+  const busy = entries.some(
+    (entry) =>
+      entry.role === "assistant" && (entry.state === "pending" || entry.state === "streaming")
+  )
 
   async function send(input: string) {
     const question = input.trim()
@@ -44,11 +65,23 @@ export function useChat() {
     const current = new AbortController()
     controller.current = current
     try {
+      // Potongan dirangkai di sini, bukan di `streamChat`: yang dialirkan server
+      // adalah potongan mentah, dan kalimat setengah jadi ini hanya untuk
+      // ditampilkan selagi berjalan. Jawaban yang sah tetap `reply.response.text`.
+      let jawaban = ""
       const reply = await streamChat(
         { question, session_id: getSessionId(), history },
         {
           signal: current.signal,
-          onStatus: (stage) => replace({ id: replyId, role: "assistant", state: "pending", stage }),
+          onStatus: (stage) => {
+            // Status yang tiba setelah token pertama tidak boleh menghapus teks
+            // yang sudah terbaca mahasiswa.
+            if (!jawaban) replace({ id: replyId, role: "assistant", state: "pending", stage })
+          },
+          onToken: (potongan) => {
+            jawaban += potongan
+            replace({ id: replyId, role: "assistant", state: "streaming", text: jawaban })
+          },
         }
       )
       replace({ id: replyId, role: "assistant", state: "done", reply })
@@ -65,12 +98,25 @@ export function useChat() {
     }
   }
 
-  /** FE-5: satu klik, tanpa konfirmasi. Dikembalikan bila gagal terkirim. */
+  /**
+   * FE-5: satu klik, tanpa konfirmasi. Dikembalikan bila gagal terkirim.
+   *
+   * Jempol ke bawah membuka kotak catatan opsional sesudahnya -- penilaiannya
+   * sendiri sudah tercatat saat itu juga, jadi mahasiswa yang mengabaikan kotak
+   * itu tetap terhitung. Jempol ke atas menutupnya kembali: catatan "apa yang
+   * kurang tepat" tidak berarti apa-apa pada jawaban yang dinilai membantu.
+   */
   async function rate(messageId: string, helpful: boolean) {
     const previous = ratings[messageId]
-    if (previous === helpful) return
+    if (previous === helpful) {
+      // Menekan ulang 👎 yang sama: buka lagi kotaknya, supaya mahasiswa yang
+      // menutupnya lalu berubah pikiran punya jalan kembali.
+      if (!helpful) setNotes((prev) => ({ ...prev, [messageId]: "open" }))
+      return
+    }
 
     setRatings((prev) => ({ ...prev, [messageId]: helpful }))
+    setNotes((prev) => (helpful ? tanpa(prev, messageId) : { ...prev, [messageId]: "open" }))
     try {
       await sendFeedback({ message_id: messageId, helpful }, getSessionId())
     } catch {
@@ -80,10 +126,51 @@ export function useChat() {
         else next[messageId] = previous
         return next
       })
+      setNotes((prev) => tanpa(prev, messageId))
     }
   }
 
-  return { entries, busy, send, ratings, rate }
+  /**
+   * Kirim catatan yang menyertai 👎 (kolom `feedback.catatan`).
+   *
+   * Dikirim sebagai umpan balik yang sama sekali lagi, bukan tambahan: server
+   * mengganti baris lama untuk `message_id` yang sama, sehingga satu jawaban
+   * tetap satu baris dan rasio kepuasan AD-5 tidak terhitung dua kali.
+   */
+  async function submitNote(messageId: string, catatan: string) {
+    const isi = catatan.trim()
+    if (!isi) {
+      dismissNote(messageId)
+      return
+    }
+
+    setNotes((prev) => ({ ...prev, [messageId]: "sending" }))
+    try {
+      await sendFeedback(
+        { message_id: messageId, helpful: false, catatan: isi },
+        getSessionId()
+      )
+      setNotes((prev) => ({ ...prev, [messageId]: "sent" }))
+    } catch {
+      // Kotaknya tetap terbuka beserta isinya: catatan yang sudah diketik
+      // mahasiswa tidak boleh hilang hanya karena koneksi tersendat.
+      setNotes((prev) => ({ ...prev, [messageId]: "error" }))
+    }
+  }
+
+  function dismissNote(messageId: string) {
+    setNotes((prev) => tanpa(prev, messageId))
+  }
+
+  const feedback: FeedbackControls = { ratings, notes, rate, submitNote, dismissNote }
+
+  return { entries, busy, send, feedback }
+}
+
+function tanpa<T>(record: Record<string, T>, key: string): Record<string, T> {
+  const next = { ...record }
+  delete next[key]
+  return next
 }
 
 /**

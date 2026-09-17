@@ -17,7 +17,7 @@ export function ChatWidget() {
   const [draft, setDraft] = useState("")
   // null = belum dimuat. Dimuat saat panel pertama kali dibuka, bukan tiap halaman dibuka.
   const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null)
-  const { entries, busy, send, ratings, rate } = useChat()
+  const { entries, busy, send, feedback } = useChat()
   const bannerEskalasi = bannerEskalasiTerakhir(entries)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -73,7 +73,10 @@ export function ChatWidget() {
             </button>
           </header>
 
-          <div ref={listRef} className={styles.messages} aria-live="polite">
+          {/* `aria-busy` menahan pembacaan selagi jawaban mengalir: tanpa itu
+              pembaca layar mengulang kalimat yang sama setiap satu potongan
+              tiba, dan jawabannya tidak pernah terbaca utuh. */}
+          <div ref={listRef} className={styles.messages} aria-live="polite" aria-busy={busy}>
             <BotBubble>
               Halo! Tanyakan urusan administrasi akademik di sini. Setiap jawaban disertai
               sumber dokumen resmi yang bisa Anda buka untuk memeriksanya.
@@ -101,8 +104,7 @@ export function ChatWidget() {
                 <AssistantMessage
                   key={entry.id}
                   entry={entry}
-                  ratings={ratings}
-                  onRate={rate}
+                  controls={feedback}
                   showEscalation={bannerEskalasi.has(entry.id)}
                 />
               )

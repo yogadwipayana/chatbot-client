@@ -259,6 +259,18 @@
   }
 }
 
+/* Penanda bahwa kalimatnya masih bertambah (FE-1). Tanpa ini jawaban yang
+   berhenti sejenak di tengah tidak dapat dibedakan dari jawaban yang selesai. */
+.caret {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  margin-left: 2px;
+  background: #777;
+  vertical-align: text-bottom;
+  animation: blink 1.1s infinite both;
+}
+
 .notice {
   margin: 6px 0 0;
   font-size: 12px;
@@ -452,6 +464,94 @@
   color: var(--red);
 }
 
+/* --- Catatan yang menyertai 👎 (FE-5) ----------------------------------- */
+
+.noteForm {
+  display: grid;
+  gap: 6px;
+  margin-top: 2px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--border-light);
+}
+
+.noteLabel {
+  font-size: 12px;
+  color: var(--text-soft);
+}
+
+.noteInput {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+
+.noteInput:focus {
+  border-color: var(--blue);
+  outline: none;
+}
+
+.noteInput:disabled {
+  opacity: 0.65;
+}
+
+.noteActions {
+  display: flex;
+  gap: 6px;
+}
+
+.noteSend {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--red-dark);
+  border-radius: 3px;
+  background: var(--red);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.noteSend:hover:not(:disabled) {
+  background: var(--red-darker);
+}
+
+.noteSend:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.noteSkip {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  background: #fff;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.noteSkip:hover:not(:disabled) {
+  border-color: #adadad;
+  background: #e7e7e7;
+}
+
+.noteError {
+  margin: 0;
+  font-size: 12px;
+  color: #a94442;
+}
+
+.noteThanks {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 /* --- Saran pertanyaan (FE-6) -------------------------------------------- */
 
 .suggestions {
@@ -552,7 +652,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dots span {
+  .dots span,
+  .caret {
     animation: none;
   }
 }

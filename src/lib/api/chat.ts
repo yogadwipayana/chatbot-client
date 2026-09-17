@@ -27,10 +27,22 @@ export type StreamedReply = {
 const TERPUTUS =
   "Koneksi terputus sebelum jawaban diterima. Silakan kirim ulang pertanyaan Anda."
 
+export type StreamHandlers = {
+  signal?: AbortSignal
+  /** Tahap yang sedang berjalan: "mencari dokumen", lalu "menyusun jawaban". */
+  onStatus?: (stage: string) => void
+  /**
+   * Satu potongan jawaban, bukan jawaban yang bertambah panjang -- pemanggil
+   * merangkainya sendiri. Tidak pernah dipanggil untuk penolakan dan balasan
+   * dukungan: keduanya tidak melewati LLM.
+   */
+  onToken?: (potongan: string) => void
+}
+
 /** FE-1: kirim pertanyaan lewat `/api/chat/stream`. */
 export async function streamChat(
   body: ChatRequest,
-  { signal, onStatus }: { signal?: AbortSignal; onStatus?: (stage: string) => void } = {}
+  { signal, onStatus, onToken }: StreamHandlers = {}
 ): Promise<StreamedReply> {
   const response = await post("/api/chat/stream", body, body.session_id, signal)
   if (!response.body) throw new ApiError(0, GAGAL_TERHUBUNG)
@@ -40,6 +52,7 @@ export async function streamChat(
   try {
     for await (const event of readServerEvents(response.body)) {
       if (event.name === "status") onStatus?.(JSON.parse(event.data).stage)
+      else if (event.name === "token") onToken?.(JSON.parse(event.data).text)
       else if (event.name === "message") reply = JSON.parse(event.data) as ChatResponse
       else if (event.name === "done") complete = true
     }
@@ -48,6 +61,10 @@ export async function streamChat(
     // Aliran putus di tengah jalan: pakai yang sudah tiba, `complete` tetap false.
   }
 
+  // Potongan yang sudah tampil sengaja tidak dipakai sebagai jawaban cadangan.
+  // Jawaban yang terpotong di tengah kalimat -- tanpa sitasi, tanpa `message_id`,
+  // mungkin tanpa kalimat yang justru membatalkan kalimat sebelumnya -- lebih
+  // berbahaya dibaca mahasiswa daripada ajakan mengirim ulang pertanyaan.
   if (!reply) throw new ApiError(0, TERPUTUS)
   return { response: reply, complete }
 }

@@ -51,10 +51,23 @@ export interface paths {
          *     | Event | Kapan | Data |
          *     |---|---|---|
          *     | `status` | Segera, sebelum retrieval | `{"stage": "mencari dokumen"}` |
+         *     | `status` | Setelah retrieval, sebelum token pertama | `{"stage": "menyusun jawaban"}` |
+         *     | `token` | Berkali-kali, selagi LLM menulis | `{"text": "<potongan jawaban>"}` |
          *     | `message` | Setelah pipeline selesai | Objek `ChatResponse` utuh |
          *     | `done` | Terakhir | `{}` |
          *
          *     Event `status` yang mengisi indikator "mencari dokumen..." di FE-1.
+         *     Tahap kedua menyusul begitu dokumen didapat, supaya indikatornya tidak
+         *     tertinggal di kalimat yang sudah tidak benar selama LLM menyusun
+         *     jawaban.
+         *
+         *     `token` membawa potongan mentah jawaban, bukan jawaban yang bertambah
+         *     panjang: klien merangkainya sendiri. Potongan hanya untuk ditampilkan
+         *     selagi berjalan -- teks final yang sah adalah `text` pada `message`,
+         *     yang juga satu-satunya sumber sitasi dan `message_id`. Jalur yang tidak
+         *     memanggil LLM (penolakan FR-3, pertanyaan sensitif FR-7, sapaan) tidak
+         *     mengirim `token` sama sekali dan langsung sampai ke `message`.
+         *
          *     Klien harus menangani putusnya koneksi di tengah jalan: bila `done`
          *     tidak pernah tiba, perlakukan jawaban sebagai tidak lengkap dan jangan
          *     tampilkan sitasinya.
@@ -454,6 +467,40 @@ export interface paths {
         patch: operations["resolve_unanswered"];
         trace?: never;
     };
+    "/api/admin/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Umpan balik mahasiswa atas jawaban
+         * @description Penilaian 👍/👎 yang dikirim mahasiswa lewat `POST /api/feedback` (FE-5),
+         *     terbaru lebih dulu, beserta pertanyaan dan jawaban yang dinilai.
+         *
+         *     Statistik AD-5 hanya memuat rasio kepuasan: ia memberi tahu ada yang
+         *     salah, bukan apanya. Daftar ini melengkapinya -- jempol ke bawah dapat
+         *     ditelusuri ke pertanyaan yang memicunya, lalu diuji ulang lewat
+         *     `POST /api/admin/test-query`.
+         *
+         *     `catatan` jarang terisi: FE-5 satu klik tanpa modal, jadi sebagian besar
+         *     baris hanya berupa jempol. `pertanyaan` diambil dari pesan mahasiswa
+         *     terakhir sebelum jawaban itu di percakapan yang sama; untuk pertanyaan
+         *     sensitif (FR-7) yang tersimpan adalah penanda tetap, bukan kalimat
+         *     aslinya.
+         *
+         *     Isi percakapan, jadi levelnya sama dengan statistik: minimal admin.
+         */
+        get: operations["list_feedback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/test-query": {
         parameters: {
             query?: never;
@@ -541,6 +588,53 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/admin/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Setelan retrieval dan chunking yang berlaku
+         * @description Parameter FR-1/FR-2/FR-3 yang dipakai layanan saat ini (`nilai`), beserta
+         *     nilai `.env` server sebagai pembandingnya (`nilai_env`) dan daftar
+         *     parameter yang sedang ditimpa dari dashboard (`diubah`).
+         *
+         *     Nama model dan endpoint ikut dikirim sebagai keterangan saja -- mengganti
+         *     model embedding menuntut re-index seluruh dokumen, jadi ia tetap hanya
+         *     lewat `.env`. Kunci API tidak pernah dikirim; hanya `api_key_terisi`.
+         */
+        get: operations["get_runtime_config"];
+        put?: never;
+        post?: never;
+        /**
+         * Kembalikan seluruh setelan ke nilai .env
+         * @description Menghapus seluruh penimpaan sekaligus. Jalan keluar saat penyetelan
+         *     membuat jawaban makin buruk dan tidak jelas lagi nilai mana yang diubah.
+         *     Mengembalikan konfigurasi sesudahnya, bukan 204, supaya dashboard tidak
+         *     perlu memuat ulang.
+         */
+        delete: operations["reset_runtime_config"];
+        options?: never;
+        head?: never;
+        /**
+         * Ubah setelan retrieval dan chunking
+         * @description Hanya field yang dikirim yang diubah, dan perubahannya berlaku pada
+         *     permintaan berikutnya tanpa restart. Nilai yang sama persis dengan
+         *     `.env` -- atau `null` -- menghapus penimpaannya; itulah cara
+         *     "kembalikan ke nilai server" untuk satu parameter.
+         *
+         *     Yang divalidasi adalah keadaan setelah perubahan, bukan hanya isi
+         *     permintaan: `chunk_overlap` yang sah sendirian tetap ditolak bila
+         *     melanggar `chunk_size` yang sudah tersimpan.
+         *
+         *     `chunk_size` dan `chunk_overlap` hanya mengenai dokumen yang diproses
+         *     setelahnya; dokumen lama baru ikut berubah bila diunggah ulang.
+         */
+        patch: operations["update_runtime_config"];
         trace?: never;
     };
     "/api/admin/me": {
@@ -858,6 +952,13 @@ export interface components {
             document_id: string;
             jumlah_halaman: number;
             jumlah_chunk: number;
+            /**
+             * @description Catatan mutu dokumen yang baru diunggah -- mis. teks yang terbaca
+             *     sangat sedikit karena isinya didominasi tangkapan layar. Bukan
+             *     galat: unggahan tetap berhasil. Tiap entri berupa kalimat siap
+             *     tampil untuk admin.
+             */
+            peringatan?: string[];
         };
         Chunk: {
             /** Format: uuid */
@@ -948,6 +1049,50 @@ export interface components {
             /** Format: date-time */
             terakhir_ditanyakan: string;
             resolved: boolean;
+        };
+        /** @description Satu penilaian FE-5 beserta pasangan pertanyaan-jawaban yang dinilai. */
+        FeedbackItem: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Baris `messages` yang dinilai, selalu jawaban chatbot.
+             */
+            message_id: string;
+            helpful: boolean;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Isi jawaban chatbot apa adanya. */
+            jawaban: string;
+            /**
+             * @description Isian bebas mahasiswa. FE-5 satu klik tanpa modal, jadi sebagian
+             *     besar umpan balik tidak memilikinya.
+             */
+            catatan?: string | null;
+            /**
+             * @description Pesan mahasiswa terakhir sebelum jawaban ini. Null bila pesannya
+             *     sudah terhapus dari log. Pertanyaan sensitif (FR-7) berisi penanda
+             *     tetap, bukan kalimat aslinya.
+             */
+            pertanyaan?: string | null;
+            /**
+             * @description `messages.meta.kind` apa adanya. Sengaja bukan enum tertutup: nilai
+             *     baru di backend tidak boleh membuat halaman ini gagal memuat.
+             */
+            kind?: string | null;
+            /** @description Skor mentah tertinggi saat jawaban itu dibuat. */
+            top_score?: number | null;
+        };
+        FeedbackPage: {
+            items: components["schemas"]["FeedbackItem"][];
+            /** @description Jumlah baris yang cocok dengan seluruh filter, untuk penomoran halaman. */
+            total: number;
+            jumlah_positif: number;
+            /**
+             * @description Keduanya dihitung mengabaikan filter `helpful`, sehingga jumlah pada
+             *     kedua tab tetap terlihat saat salah satunya sedang dipilih.
+             */
+            jumlah_negatif: number;
         };
         /** @description Rincian diagnosa AD-6. */
         RetrievedChunk: {
@@ -1092,6 +1237,69 @@ export interface components {
              *     dinyalakan lewat `KILL_SWITCH_ENABLED`.
              */
             engaged_by?: string | null;
+        };
+        /**
+         * @description Parameter yang dapat disetel dari dashboard. Namanya sengaja sama persis
+         *     dengan variabel di `.env` dan field `app.config.Settings`.
+         */
+        RuntimeConfigValues: {
+            /** @description Kandidat per sumber sebelum fusi (FR-2). */
+            retrieval_candidates: number;
+            /** @description Potongan yang masuk konteks LLM setelah RRF. */
+            retrieval_top_n: number;
+            /** @description Konstanta peredam RRF; makin besar, makin rata pengaruh peringkat. */
+            rrf_k: number;
+            /** @description Bobot pencarian vektor saat fusi. 0 mematikan sumber ini. */
+            rrf_weight_vector: number;
+            /** @description Bobot pencarian kata saat fusi. 0 mematikan sumber ini. */
+            rrf_weight_fulltext: number;
+            /** @description Kemiripan vektor minimum sebelum LLM dipanggil (FR-3). */
+            vector_threshold: number;
+            /** @description Skor `ts_rank` minimum sebelum LLM dipanggil (FR-3). */
+            lexical_threshold: number;
+            /** @description Pagar atas panjang satu potongan, dalam token (FR-1). */
+            chunk_size: number;
+            /** @description Tumpang tindih antar potongan saat satu bagian harus dipecah. */
+            chunk_overlap: number;
+        };
+        /**
+         * @description Hanya field yang dikirim yang diubah; `null` mengembalikan field itu ke
+         *     nilai `.env`. Batas di sini adalah pagar kewarasan; aturan antar-field
+         *     diperiksa terhadap hasil gabungannya.
+         */
+        RuntimeConfigUpdate: {
+            retrieval_candidates?: number | null;
+            retrieval_top_n?: number | null;
+            rrf_k?: number | null;
+            rrf_weight_vector?: number | null;
+            rrf_weight_fulltext?: number | null;
+            vector_threshold?: number | null;
+            lexical_threshold?: number | null;
+            chunk_size?: number | null;
+            chunk_overlap?: number | null;
+        };
+        RuntimeConfig: {
+            /** @description Yang dipakai layanan saat ini. */
+            nilai: components["schemas"]["RuntimeConfigValues"];
+            /** @description Yang tertulis di `.env` server. */
+            nilai_env: components["schemas"]["RuntimeConfigValues"];
+            /** @description Nama parameter yang sedang ditimpa dari dashboard. */
+            diubah: string[];
+            chat_model: string;
+            embed_model: string;
+            /** @description Endpoint OpenAI-compatible; kosong berarti OpenAI resmi. */
+            base_url?: string | null;
+            /** @description Kuncinya sendiri tidak pernah dikirim ke peramban. */
+            api_key_terisi: boolean;
+            /** Format: date-time */
+            diperbarui_at?: string | null;
+            diperbarui_oleh?: string | null;
+            /**
+             * @description Terisi bila nilai tersimpan tidak dapat dipakai (mis. `.env` berubah
+             *     sehingga kombinasinya melanggar aturan) dan layanan sementara
+             *     kembali ke `.env`.
+             */
+            peringatan?: string | null;
         };
         /**
          * @description Level bertingkat; setiap level mencakup hak level di bawahnya. `staf`
@@ -1328,6 +1536,15 @@ export interface operations {
                     /**
                      * @example event: status
                      *     data: {"stage": "mencari dokumen"}
+                     *
+                     *     event: status
+                     *     data: {"stage": "menyusun jawaban"}
+                     *
+                     *     event: token
+                     *     data: {"text": "Pengisian KRS dibuka"}
+                     *
+                     *     event: token
+                     *     data: {"text": " 1-7 Agustus 2025"}
                      *
                      *     event: message
                      *     data: {"kind": "answer", "text": "Pengisian KRS dibuka 1-7 Agustus 2025 [Panduan Akademik 2025, hal. 12].", "citations": [{"judul": "Panduan Akademik 2025", "halaman": 12, "document_id": "3f1a...", "file_path": "storage/documents/3f1a....pdf"}], "contacts": [], "escalated": false, "top_score": 0.82}
@@ -1906,6 +2123,54 @@ export interface operations {
             404: components["responses"]["TidakDitemukan"];
         };
     };
+    list_feedback: {
+        parameters: {
+            query?: {
+                /** @description Kosongkan untuk menampilkan keduanya. */
+                helpful?: boolean;
+                sejak?: string;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Umpan balik */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "7d1e4b2a-9c3f-4e58-b0a7-1f2e3d4c5b6a",
+                     *           "message_id": "9c3e1a44-6b2d-4f51-8a70-2d9b5c1e7f03",
+                     *           "helpful": false,
+                     *           "catatan": "Jawabannya tidak menyebut biaya cetaknya",
+                     *           "created_at": "2026-09-09T14:25:03Z",
+                     *           "pertanyaan": "Berapa biaya legalisir ijazah?",
+                     *           "jawaban": "Legalisir ijazah diurus di Biro Administrasi Akademik [Panduan Akademik 2025, hal. 12].",
+                     *           "kind": "answer",
+                     *           "top_score": 0.62
+                     *         }
+                     *       ],
+                     *       "total": 18,
+                     *       "jumlah_positif": 124,
+                     *       "jumlah_negatif": 18
+                     *     }
+                     */
+                    "application/json": components["schemas"]["FeedbackPage"];
+                };
+            };
+            401: components["responses"]["TidakBerwenang"];
+            403: components["responses"]["Terlarang"];
+        };
+    };
     admin_test_query: {
         parameters: {
             query?: never;
@@ -2014,6 +2279,85 @@ export interface operations {
             401: components["responses"]["TidakBerwenang"];
             403: components["responses"]["Terlarang"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    get_runtime_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Konfigurasi */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeConfig"];
+                };
+            };
+            401: components["responses"]["TidakBerwenang"];
+            403: components["responses"]["Terlarang"];
+        };
+    };
+    reset_runtime_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Konfigurasi setelah dikembalikan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeConfig"];
+                };
+            };
+            401: components["responses"]["TidakBerwenang"];
+            403: components["responses"]["Terlarang"];
+        };
+    };
+    update_runtime_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuntimeConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description Konfigurasi setelah perubahan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeConfig"];
+                };
+            };
+            401: components["responses"]["TidakBerwenang"];
+            403: components["responses"]["Terlarang"];
+            /** @description Nilai di luar batas, atau kombinasinya tidak sah */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     get_me: {
