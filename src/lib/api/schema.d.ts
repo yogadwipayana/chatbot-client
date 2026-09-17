@@ -558,6 +558,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/costs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rincian biaya dan token
+         * @description Menghitung penggunaan token dan estimasi biaya dari kolom `messages.meta`.
+         */
+        get: operations["admin_costs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/kill-switch": {
         parameters: {
             query?: never;
@@ -873,6 +893,8 @@ export interface components {
             /** @description false berarti kill switch aktif; proses tetap sehat. */
             chat_enabled: boolean;
             kill_switch_reason?: string | null;
+            /** @description Apakah trace FR-8 benar-benar terkirim ke LangSmith. Tracing yang mati tidak menjatuhkan satu pun permintaan, sehingga tanpa baris ini ia hanya ketahuan saat ada jawaban buruk yang jejaknya ternyata tidak pernah ada. */
+            tracing_enabled?: boolean;
         };
         LoginRequest: {
             /** Format: email */
@@ -1157,7 +1179,7 @@ export interface components {
             contacts: components["schemas"]["ContactOut"][];
             escalated: boolean;
             latency_ms: number;
-            /** @description Penghubung ke trace LangSmith. Selalu null sampai tracing dipasang. */
+            /** @description Akar trace LangSmith untuk uji coba ini -- mencakup penulisan ulang query, retrieval, dan penyusunan jawaban sekaligus. Null bila tracing mati (LANGSMITH_TRACING=false atau LANGSMITH_API_KEY kosong). */
             langsmith_run_id?: string | null;
         };
         DailyVolume: {
@@ -1221,6 +1243,50 @@ export interface components {
              *     token < 3000 ms) diukur di LangSmith; angka ini batas atasnya.
              */
             latency_p95_ms: number | null;
+        };
+        CostByModel: {
+            /** @enum {string} */
+            jenis: "llm_chat" | "embedding_chat" | "embedding_ingestion";
+            model: string;
+            jumlah_panggilan: number;
+            input_tokens: number;
+            output_tokens: number;
+            tokens: number;
+            biaya_usd: number;
+        };
+        DailyCost: {
+            /** Format: date */
+            tanggal: string;
+            jumlah_panggilan: number;
+            llm_tokens: number;
+            embed_tokens: number;
+            biaya_llm_usd: number;
+            biaya_embedding_usd: number;
+            biaya_ingestion_usd: number;
+            biaya_usd: number;
+        };
+        Costs: {
+            /** Format: date */
+            sejak: string;
+            /** Format: date */
+            sampai: string;
+            jumlah_panggilan_llm: number;
+            input_tokens: number;
+            output_tokens: number;
+            total_tokens: number;
+            biaya_usd: number;
+            biaya_llm_usd: number;
+            embed_chat_tokens: number;
+            biaya_embed_chat_usd: number;
+            jumlah_embed_chat: number;
+            usage_log_tokens: number;
+            biaya_usage_log_usd: number;
+            jumlah_usage_log: number;
+            llm_tanpa_biaya: number;
+            embed_chat_tanpa_biaya: number;
+            usage_log_tanpa_biaya: number;
+            rincian_model: components["schemas"]["CostByModel"][];
+            biaya_harian: components["schemas"]["DailyCost"][];
         };
         KillSwitchRequest: {
             engaged: boolean;
@@ -2222,6 +2288,40 @@ export interface operations {
             401: components["responses"]["TidakBerwenang"];
             403: components["responses"]["Terlarang"];
             /** @description Rentang tanggal tidak sah (terbalik atau terlalu panjang) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    admin_costs: {
+        parameters: {
+            query?: {
+                sejak?: string;
+                sampai?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rincian biaya */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Costs"];
+                };
+            };
+            401: components["responses"]["TidakBerwenang"];
+            403: components["responses"]["Terlarang"];
+            /** @description Rentang tanggal tidak sah */
             422: {
                 headers: {
                     [name: string]: unknown;
