@@ -30,12 +30,12 @@ export type Course = {
 }
 
 export const student: Student = {
-  nim: "2401010273",
-  nama: "I Kadek Yoga Dwipayana",
+  nim: "2401010222",
+  nama: "YOGA",
   fakultas: "Fakultas Teknologi dan Informatika",
   jurusan: "IF-MTI",
   tipeKelas: "Reguler",
-  dosenPa: "Dr. I Kadek Budi Sandika, S.T., M.Pd.",
+  dosenPa: "Yoga Dwipayana",
   periode: "Ganjil - 2026/2027",
   ipSemesterSebelumnya: "3.73",
   sksLulusWajib: { lulus: 84, total: 135 },
