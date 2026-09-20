@@ -30,8 +30,8 @@ export type Course = {
 }
 
 export const student: Student = {
-  nim: "2401010222",
-  nama: "YOGA",
+  nim: "2401010101",
+  nama: "Yoga",
   fakultas: "Fakultas Teknologi dan Informatika",
   jurusan: "IF-MTI",
   tipeKelas: "Reguler",
