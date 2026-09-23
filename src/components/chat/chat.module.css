@@ -1,4 +1,17 @@
-/* Panel mengikuti komponen "direct chat" AdminLTE supaya menyatu dengan portal. */
+/* Asisten administrasi: panel mengambang di portal SADS dan halaman /embed.
+   Warna mengikuti token AdminLTE di globals.css (merah SADS); bentuknya --
+   sudut membulat, latar percakapan abu muda, gelembung putih -- sengaja lebih
+   lunak dari AdminLTE supaya terbaca sebagai obrolan, bukan formulir. */
+
+.panel,
+.embedded {
+  --chat-bg: #f4f5f7;
+  --chat-line: #e4e6eb;
+  --chat-tint: #fdeeec;
+  --chat-radius: 14px;
+}
+
+/* --- Tombol pembuka ------------------------------------------------------ */
 
 .launcher {
   position: fixed;
@@ -8,16 +21,16 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 46px;
-  padding: 0 18px;
-  border: 1px solid var(--red-dark);
-  border-radius: 23px;
-  background: var(--red);
+  height: 48px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 24px;
+  background: linear-gradient(135deg, var(--red), var(--red-darker));
   color: #fff;
   font-size: 15px;
   font-weight: 600;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.15s, box-shadow 0.15s;
+  box-shadow: 0 6px 18px rgba(194, 51, 33, 0.35);
+  transition: box-shadow 0.15s, transform 0.15s;
 }
 
 .launcher svg {
@@ -25,31 +38,63 @@
 }
 
 .launcher:hover {
-  background: var(--red-darker);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 8px 22px rgba(194, 51, 33, 0.45);
+  transform: translateY(-1px);
 }
+
+/* --- Kerangka panel ------------------------------------------------------ */
 
 .panel {
   position: fixed;
   right: 20px;
-  bottom: 78px;
+  bottom: 80px;
   z-index: 1040;
   display: flex;
   flex-direction: column;
-  width: 380px;
-  height: min(580px, calc(100dvh - 100px));
-  border-top: 3px solid var(--red);
-  border-radius: 3px;
-  background: #fff;
-  box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+  width: 390px;
+  height: min(620px, calc(100dvh - 104px));
+  overflow: hidden;
+  border-radius: var(--chat-radius);
+  background: var(--chat-bg);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+}
+
+/* Halaman /embed: panel mengisi iframe yang dipasang `public/embed.js`, jadi
+   posisi, ukuran, dan bayangannya diatur di sana. Dibuka langsung sebagai
+   halaman penuh, ia menjadi satu kolom di tengah. */
+.embedded {
+  display: flex;
+  flex-direction: column;
+  max-width: 760px;
+  height: 100dvh;
+  margin: 0 auto;
+  background: var(--chat-bg);
+}
+
+/* `display: flex` di atas mengalahkan gaya bawaan atribut `hidden`. */
+.panel[hidden],
+.embedded[hidden] {
+  display: none;
 }
 
 .header {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 10px;
-  border-bottom: 1px solid var(--border-light);
+  align-items: center;
+  gap: 10px;
+  padding: 14px 12px 14px 14px;
+  background: linear-gradient(135deg, var(--red), var(--red-darker));
+  color: #fff;
+}
+
+.headerAvatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 19px;
 }
 
 .heading {
@@ -59,35 +104,43 @@
 
 .title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 1.1;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .subtitle {
-  margin: 3px 0 0;
+  margin: 2px 0 0;
   font-size: 12px;
-  color: var(--muted);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .tool {
   display: grid;
+  flex: none;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border: 0;
+  border-radius: 50%;
   background: transparent;
-  color: #97a0b3;
-  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
 }
 
 .tool:hover {
-  color: #606c84;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.tool:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
 }
 
 .messages {
   flex: 1;
-  padding: 10px;
+  padding: 16px 14px 8px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -96,36 +149,47 @@
 /* --- Pesan -------------------------------------------------------------- */
 
 .msg {
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 .name {
-  margin-bottom: 2px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-soft);
+  margin-bottom: 3px;
+  font-size: 11px;
+  color: var(--muted);
 }
 
-.msgUser .name {
-  text-align: right;
+/* Avatar sudah menandai pesan asisten; namanya tetap ada untuk pembaca layar. */
+.msg:not(.msgUser) .name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.msgUser {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .row {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
 }
 
 .avatar {
   display: grid;
   flex: none;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  background: var(--border);
-  color: #555;
-  font-size: 16px;
+  background: var(--chat-tint);
+  color: var(--red);
+  font-size: 14px;
 }
 
 .body {
@@ -134,78 +198,52 @@
 }
 
 .text {
-  --bubble-bg: var(--border);
-  --bubble-border: var(--border);
-  position: relative;
-  padding: 6px 10px;
+  --bubble-bg: #fff;
+  --bubble-border: var(--chat-line);
+  display: inline-block;
+  max-width: 100%;
+  padding: 9px 12px;
   border: 1px solid var(--bubble-border);
-  border-radius: 5px;
+  border-radius: 4px var(--chat-radius) var(--chat-radius) var(--chat-radius);
   background: var(--bubble-bg);
-  color: var(--text-soft);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  color: var(--text);
+  line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-}
-
-/* Ekor gelembung, seperti .direct-chat-text AdminLTE. */
-.text::before,
-.text::after {
-  position: absolute;
-  top: 16px;
-  right: 100%;
-  width: 0;
-  height: 0;
-  border: solid transparent;
-  border-right-color: var(--bubble-border);
-  content: "";
-  pointer-events: none;
-}
-
-.text::before {
-  margin-top: -6px;
-  border-width: 6px;
-}
-
-.text::after {
-  margin-top: -5px;
-  border-width: 5px;
-  border-right-color: var(--bubble-bg);
 }
 
 .msgUser .text {
   --bubble-bg: var(--red);
   --bubble-border: var(--red);
-  margin-left: 50px;
+  max-width: 85%;
+  border-radius: var(--chat-radius) 4px var(--chat-radius) var(--chat-radius);
+  box-shadow: 0 2px 6px rgba(221, 75, 57, 0.25);
   color: #fff;
-}
-
-/* Gelembung mahasiswa menempel tepi kanan panel, jadi ekornya akan menonjol
-   keluar dan memunculkan scrollbar mendatar. Tidak dipakai. */
-.msgUser .text::before,
-.msgUser .text::after {
-  display: none;
 }
 
 .pending {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 32px;
+  min-height: 38px;
+  color: var(--muted);
 }
 
 .error {
   --bubble-bg: #fff;
-  --bubble-border: var(--red);
+  --bubble-border: #f1b5ad;
   color: #a94442;
 }
 
 .refusal {
-  --bubble-bg: #fef5e7;
-  --bubble-border: var(--yellow);
+  --bubble-bg: #fff8ec;
+  --bubble-border: #f6d7a4;
 }
 
 .support {
-  --bubble-bg: #e8f7fc;
-  --bubble-border: var(--aqua);
+  --bubble-bg: #eef9fd;
+  --bubble-border: #b9e6f3;
 }
 
 .label {
@@ -213,10 +251,10 @@
   align-items: center;
   gap: 6px;
   margin-bottom: 4px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
 }
 
 .refusal .label {
@@ -236,7 +274,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #777;
+  background: #999;
   animation: blink 1.2s infinite both;
 }
 
@@ -266,7 +304,7 @@
   width: 7px;
   height: 14px;
   margin-left: 2px;
-  background: #777;
+  background: #999;
   vertical-align: text-bottom;
   animation: blink 1.1s infinite both;
 }
@@ -277,15 +315,24 @@
   color: #9a5b00;
 }
 
+/* Label unit tujuan di samping nama "Anda". */
+.scopeTag {
+  color: var(--red-darker);
+  font-weight: 600;
+}
+
 /* --- Sitasi (FE-2) ------------------------------------------------------ */
 
 .sources {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .sourcesLabel {
-  margin: 0 0 3px;
-  font-size: 12px;
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--muted);
 }
 
@@ -309,9 +356,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 8px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
+  padding: 8px 10px;
+  border: 1px solid var(--chat-line);
+  border-radius: 10px;
   background: #fff;
   color: var(--text);
   font-size: 13px;
@@ -328,7 +375,7 @@
 
 /* Sumber tanya jawab tidak dapat dibuka: tanpa sorotan yang menjanjikan klik. */
 .citationStatic:hover {
-  border-color: var(--border);
+  border-color: var(--chat-line);
 }
 
 .qaIcon {
@@ -354,7 +401,7 @@
 /* Kartu berisi beberapa tautan halaman, jadi kartunya sendiri tidak dapat
    diklik: sorotan tepi yang menjanjikan klik pindah ke nomor halamannya. */
 .citationGrouped:hover {
-  border-color: var(--border);
+  border-color: var(--chat-line);
 }
 
 .citationPages {
@@ -384,11 +431,11 @@
 /* --- Eskalasi (FE-3) ---------------------------------------------------- */
 
 .escalation {
-  margin-top: 6px;
-  padding: 8px 10px;
-  border-left: 3px solid var(--yellow);
-  border-radius: 3px;
-  background: #fef5e7;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #f6d7a4;
+  border-radius: 10px;
+  background: #fff8ec;
   font-size: 13px;
 }
 
@@ -443,14 +490,14 @@
   width: 30px;
   height: 30px;
   border: 0;
-  border-radius: 3px;
+  border-radius: 50%;
   background: transparent;
   color: #97a0b3;
   font-size: 14px;
 }
 
 .rate:hover {
-  background: var(--border-light);
+  background: #fff;
   color: var(--text-soft);
 }
 
@@ -470,10 +517,10 @@
   display: grid;
   gap: 6px;
   margin-top: 2px;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  background: var(--border-light);
+  padding: 10px;
+  border: 1px solid var(--chat-line);
+  border-radius: 10px;
+  background: #fff;
 }
 
 .noteLabel {
@@ -484,7 +531,7 @@
 .noteInput {
   padding: 6px 8px;
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: 8px;
   background: #fff;
   font-family: inherit;
   font-size: 13px;
@@ -492,7 +539,7 @@
 }
 
 .noteInput:focus {
-  border-color: var(--blue);
+  border-color: var(--red);
   outline: none;
 }
 
@@ -506,10 +553,10 @@
 }
 
 .noteSend {
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--red-dark);
-  border-radius: 3px;
+  height: 30px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 15px;
   background: var(--red);
   color: #fff;
   font-size: 12px;
@@ -526,18 +573,17 @@
 }
 
 .noteSkip {
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid var(--chat-line);
+  border-radius: 15px;
   background: #fff;
   color: var(--text-soft);
   font-size: 12px;
 }
 
 .noteSkip:hover:not(:disabled) {
-  border-color: #adadad;
-  background: #e7e7e7;
+  background: var(--chat-bg);
 }
 
 .noteError {
@@ -552,62 +598,260 @@
   color: var(--muted);
 }
 
-/* --- Saran pertanyaan (FE-6) -------------------------------------------- */
+/* --- Sapaan dan menu topik ---------------------------------------------- */
 
-.suggestions {
-  display: grid;
-  gap: 6px;
-  margin: -4px 0 12px 44px;
+.greeting {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 15px;
+  color: var(--text);
 }
 
-.suggestion {
-  padding: 6px 10px;
-  border: 1px solid #ddd;
-  border-radius: 3px;
-  background: var(--border-light);
-  color: var(--text-soft);
+/* Ubin kategori seperti halaman FAQ, selebar panel (tidak menjorok di bawah
+   avatar). Selalu tiga kolom: sembilan unit tersusun rapi 3x3 di widget
+   maupun di /embed yang lebar, alih-alih baris terakhir yang timpang. */
+.topics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: -4px 0 16px;
+}
+
+.topic {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 12px 6px 10px;
+  border: 1px solid var(--chat-line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text);
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.topic:hover {
+  border-color: #f1b5ad;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.topic:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+.topicIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--chat-tint);
+  color: var(--red);
+  font-size: 16px;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.topicText {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.topicName {
+  max-width: 100%;
   font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.topicDesc {
+  font-size: 11px;
+  line-height: 1.25;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.topicArrow {
+  flex: none;
+  font-size: 10px;
+  color: #b0b6c3;
+}
+
+/* Topik yang sedang berlaku untuk pertanyaan berikutnya. */
+.topicActive,
+.topicActive:hover {
+  border-color: var(--red);
+  background: #fff7f6;
+}
+
+.topicActive .topicIcon {
+  background: var(--red);
+  color: #fff;
+}
+
+/* "Topik lain" bukan unit: selebar menu, mendatar, dan berikon abu-abu,
+   supaya terbaca sebagai jalan keluar, bukan kategori kesepuluh. */
+.topicOther {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  gap: 10px;
+  padding: 10px 12px;
   text-align: left;
 }
 
-.suggestion:hover {
-  border-color: #adadad;
-  background: #e7e7e7;
+.topicOther .topicIcon {
+  width: 32px;
+  height: 32px;
+  background: #eef0f3;
+  color: var(--muted);
+  font-size: 13px;
 }
 
-/* --- Kotak input -------------------------------------------------------- */
+/* --- Pertanyaan siap klik per topik -------------------------------------- */
 
+.faqQuestions {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #f3cbc5;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--red-darker);
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.suggestion > span {
+  flex: 1;
+}
+
+.suggestion:hover:not(:disabled) {
+  border-color: var(--red);
+  background: #fff7f6;
+}
+
+.suggestion:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Kotak pertanyaan ---------------------------------------------------- */
+
+.footer {
+  border-top: 1px solid var(--chat-line);
+  background: #fff;
+}
+
+/* Lingkup pencarian yang sedang berlaku, beserta tombol menggantinya: menu
+   topiknya sendiri menghilang setelah dipilih. */
+.scopeBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.scopeName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scopeName strong {
+  font-weight: 600;
+  color: var(--red-darker);
+}
+
+.scopeChange {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--chat-line);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--text-soft);
+  font-size: 12px;
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+}
+
+.scopeChange:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.scopeChangeOpen,
+.scopeChangeOpen:hover {
+  border-color: var(--red);
+  background: #fff7f6;
+  color: var(--red);
+}
+
+/* Kotaknya tumbuh ke atas, jadi tombol kirim tetap sejajar baris terakhir. */
 .form {
   display: flex;
-  padding: 10px 10px 6px;
-  border-top: 1px solid var(--border-light);
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px 2px;
 }
 
 .input {
   flex: 1;
   min-width: 0;
-  height: 34px;
-  padding: 6px 12px;
-  border: 1px solid var(--border);
-  border-right: 0;
-  border-radius: 0;
-  background: #fff;
+  /* Tingginya diatur chat-panel.tsx mengikuti isi; ini batas atasnya --
+     kira-kira lima baris, sesudah itu isinya yang bergulir supaya kotak
+     pertanyaan tidak pernah menelan seluruh percakapan di atasnya. */
+  max-height: 124px;
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  border-radius: 20px;
+  background: var(--chat-bg);
   font-size: 14px;
+  line-height: 1.43;
+  resize: none;
+  overflow-y: auto;
+  transition: border-color 0.15s, background-color 0.15s;
 }
 
 .input:focus {
-  border-color: var(--blue);
+  border-color: #f1b5ad;
+  background: #fff;
   outline: none;
 }
 
 .send {
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--red-dark);
-  border-radius: 0;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
   background: var(--red);
   color: #fff;
-  font-weight: 600;
+  font-size: 15px;
+  transition: background-color 0.15s;
 }
 
 .send:hover:not(:disabled) {
@@ -615,20 +859,53 @@
 }
 
 .send:disabled {
-  opacity: 0.65;
+  background: #f0a79e;
   cursor: not-allowed;
+}
+
+.send:focus-visible {
+  outline: 2px solid var(--red-darker);
+  outline-offset: 2px;
+}
+
+/* Pengganti kotak pertanyaan sebelum topik dipilih: menjelaskan kenapa belum
+   ada tempat mengetik, alih-alih menyisakan footer kosong. */
+.composerHint {
+  margin: 0;
+  padding: 14px 12px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+  text-align: center;
+}
+
+.counter {
+  margin: 0;
+  padding: 0 16px 2px;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sudah mentok: tanpa penanda ini kotak yang berhenti menerima huruf terbaca
+   sebagai macet, bukan sebagai batas yang tercapai. */
+.counterFull {
+  color: var(--red);
+  font-weight: 600;
 }
 
 .disclaimer {
   margin: 0;
-  padding: 0 10px 8px;
+  padding: 2px 12px 10px;
   font-size: 11px;
   color: var(--muted);
+  text-align: center;
 }
 
 @media (max-width: 575px) {
   .launcher {
-    width: 46px;
+    width: 48px;
     padding: 0;
     justify-content: center;
   }
@@ -645,9 +922,9 @@
   .panel {
     right: 10px;
     left: 10px;
-    bottom: 76px;
+    bottom: 78px;
     width: auto;
-    height: calc(100dvh - 88px);
+    height: calc(100dvh - 90px);
   }
 }
 
@@ -655,5 +932,15 @@
   .dots span,
   .caret {
     animation: none;
+  }
+
+  .launcher,
+  .topic {
+    transition: none;
+  }
+
+  .launcher:hover,
+  .topic:hover {
+    transform: none;
   }
 }

@@ -20,10 +20,18 @@ import type { ChatEntry, FeedbackControls, NoteState } from "./use-chat"
 
 type AssistantEntry = Extract<ChatEntry, { role: "assistant" }>
 
-export function UserMessage({ text }: { text: string }) {
+/**
+ * `unit` ditampilkan di samping nama: setelah mahasiswa berganti pilihan di
+ * tengah percakapan, hanya label ini yang menjelaskan kenapa pertanyaan yang
+ * mirip mendapat jawaban -- atau penolakan -- yang berbeda.
+ */
+export function UserMessage({ text, unit }: { text: string; unit: string | null }) {
   return (
     <div className={cx(styles.msg, styles.msgUser)}>
-      <div className={styles.name}>Anda</div>
+      <div className={styles.name}>
+        Anda
+        {unit && <span className={styles.scopeTag}> · ke {unit}</span>}
+      </div>
       <div className={styles.text}>{text}</div>
     </div>
   )

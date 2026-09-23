@@ -7,7 +7,10 @@ import { sendFeedback, streamChat, type StreamedReply, type Turn } from "@/lib/a
 import { getSessionId } from "@/lib/session"
 
 export type ChatEntry =
-  | { id: number; role: "user"; text: string }
+  /** `unit`: unit yang dipilih saat pertanyaan ini dikirim; null = semua unit. */
+  | { id: number; role: "user"; text: string; unit: string | null }
+  /** Topik yang diklik mahasiswa; null = "Topik lain" (semua unit). */
+  | { id: number; role: "topic"; unit: string | null }
   | { id: number; role: "assistant"; state: "pending"; stage: string | null }
   | { id: number; role: "assistant"; state: "streaming"; text: string }
   | { id: number; role: "assistant"; state: "done"; reply: StreamedReply }
@@ -34,6 +37,10 @@ const HISTORY_LIMIT = 3
 
 export function useChat() {
   const [entries, setEntries] = useState<ChatEntry[]>([])
+  // Topik yang sedang berlaku untuk pertanyaan yang DIKETIK; null = semua unit.
+  // Sengaja tidak disimpan di localStorage: topik kemarin yang diam-diam masih
+  // menyaring pencarian hari ini hanya menghasilkan penolakan yang membingungkan.
+  const [unit, setUnit] = useState<string | null>(null)
   const [ratings, setRatings] = useState<Record<string, boolean>>({})
   const [notes, setNotes] = useState<Record<string, NoteState>>({})
   const controller = useRef<AbortController | null>(null)
@@ -46,7 +53,12 @@ export function useChat() {
       entry.role === "assistant" && (entry.state === "pending" || entry.state === "streaming")
   )
 
-  async function send(input: string) {
+  /**
+   * `tujuan` hanya untuk pertanyaan siap klik milik topik tertentu -- yang
+   * diklik dari gelembung lama tetap dicari di unitnya sendiri, bukan di topik
+   * yang kebetulan sedang berlaku. Pertanyaan ketikan memakai topik saat ini.
+   */
+  async function send(input: string, tujuan: string | null = unit) {
     const question = input.trim()
     if (!question || busy) return
 
@@ -58,7 +70,7 @@ export function useChat() {
 
     setEntries((prev) => [
       ...prev,
-      { id: userId, role: "user", text: question },
+      { id: userId, role: "user", text: question, unit: tujuan },
       { id: replyId, role: "assistant", state: "pending", stage: null },
     ])
 
@@ -70,7 +82,7 @@ export function useChat() {
       // ditampilkan selagi berjalan. Jawaban yang sah tetap `reply.response.text`.
       let jawaban = ""
       const reply = await streamChat(
-        { question, session_id: getSessionId(), history },
+        { question, session_id: getSessionId(), history, unit: tujuan },
         {
           signal: current.signal,
           onStatus: (stage) => {
@@ -164,7 +176,14 @@ export function useChat() {
 
   const feedback: FeedbackControls = { ratings, notes, rate, submitNote, dismissNote }
 
-  return { entries, busy, send, feedback }
+  /** Klik satu topik: dicatat sebagai giliran mahasiswa, lalu berlaku untuk pertanyaan berikutnya. */
+  function chooseTopic(pilihan: string | null) {
+    const id = nextId.current++
+    setUnit(pilihan)
+    setEntries((prev) => [...prev, { id, role: "topic", unit: pilihan }])
+  }
+
+  return { entries, busy, send, feedback, unit, chooseTopic }
 }
 
 function tanpa<T>(record: Record<string, T>, key: string): Record<string, T> {
@@ -202,8 +221,10 @@ export function bannerEskalasiTerakhir(entries: ChatEntry[]): Set<number> {
 function toHistory(entries: ChatEntry[]): Turn[] {
   const turns: Turn[] = []
   for (const entry of entries) {
+    // Klik topik tidak ikut: "Keuangan" bukan pertanyaan, dan menyertakannya
+    // hanya mengacaukan penulisan ulang query (FR-4).
     if (entry.role === "user") turns.push({ role: "user", konten: entry.text })
-    else if (entry.state === "done" && entry.reply.complete) {
+    else if (entry.role === "assistant" && entry.state === "done" && entry.reply.complete) {
       turns.push({ role: "assistant", konten: entry.reply.response.text })
     }
   }

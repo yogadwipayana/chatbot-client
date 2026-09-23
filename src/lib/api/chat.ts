@@ -14,6 +14,8 @@ export type Citation = Schemas["CitationOut"]
 export type Contact = Schemas["ContactOut"]
 export type Turn = Schemas["TurnIn"]
 export type Suggestion = Schemas["Suggestion"]
+export type Unit = Schemas["UnitOut"]
+export type FaqQuestion = Schemas["FaqQuestion"]
 
 export type StreamedReply = {
   response: ChatResponse
@@ -88,6 +90,41 @@ export async function fetchSuggestions(signal?: AbortSignal): Promise<Suggestion
     if (!response.ok) return []
     const data: unknown = await response.json()
     return Array.isArray(data) ? (data as Suggestion[]).slice(0, 5) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Isi menu unit. Gagal dimuat berarti menunya tidak tampil dan pertanyaan dicari
+ * di semua unit: menu ini penyempit pencarian, bukan syarat untuk bertanya.
+ */
+export async function fetchUnits(signal?: AbortSignal): Promise<Unit[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/units`, { signal })
+    if (!response.ok) return []
+    const data: unknown = await response.json()
+    return Array.isArray(data) ? (data as Unit[]) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Pertanyaan siap klik untuk satu topik (null = semua unit), dari entri tanya
+ * jawab yang diisi admin. Gagal dimuat sama dengan belum ada entri: menu cukup
+ * mengajak mahasiswa mengetik sendiri.
+ */
+export async function fetchFaqQuestions(
+  unit: string | null,
+  signal?: AbortSignal
+): Promise<string[]> {
+  const query = unit ? `?unit=${encodeURIComponent(unit)}` : ""
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/faq/questions${query}`, { signal })
+    if (!response.ok) return []
+    const data: unknown = await response.json()
+    return Array.isArray(data) ? (data as FaqQuestion[]).map((q) => q.pertanyaan) : []
   } catch {
     return []
   }

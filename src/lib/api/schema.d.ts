@@ -134,6 +134,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar unit layanan
+         * @description Isi menu pilihan unit di chatbot. `nama` dikirim kembali apa adanya
+         *     sebagai `unit` pada `POST /api/chat` dan `/api/chat/stream`.
+         *
+         *     Hanya unit aktif, dalam urutan tampil yang diatur di tabel `units`.
+         *     Dashboard admin memakai daftar yang sama: dokumen, entri tanya jawab,
+         *     dan akun staf hanya dapat diberi salah satu unit ini.
+         *
+         *     Tidak tunduk pada kill switch, supaya dashboard admin tetap berfungsi
+         *     saat layanan chat dimatikan.
+         */
+        get: operations["list_units"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/faq/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pertanyaan siap klik untuk satu topik
+         * @description Isi menu topik chatbot: setelah mahasiswa memilih unit, tampilkan
+         *     pertanyaan ini sebagai tombol. Mengklik satu tombol mengirim teksnya
+         *     sebagai `question` pada `/api/chat/stream`, bersama `unit` yang sama.
+         *
+         *     Asalnya entri tanya jawab yang diketik admin, bukan saran karangan, dan
+         *     hanya entri yang sedang berlaku (aktif dan belum lewat `valid_until`) --
+         *     persis yang terambil retrieval. Setiap pertanyaan di sini karena itu
+         *     pasti punya jawaban. Topik yang belum punya entri mengembalikan daftar
+         *     kosong.
+         *
+         *     Terbaru lebih dulu. Tidak tunduk pada kill switch, sama seperti
+         *     `GET /api/units`.
+         */
+        get: operations["list_faq_questions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/documents/{document_id}/file": {
         parameters: {
             query?: never;
@@ -810,6 +869,20 @@ export interface components {
              * @default []
              */
             history: components["schemas"]["TurnIn"][];
+            /**
+             * @description `nama` dari `GET /api/units`. Retrieval -- vektor maupun fulltext --
+             *     hanya mencari di dokumen unit ini. Kosongkan atau kirim null untuk
+             *     mencari di semua unit.
+             *
+             *     Dicocokkan tanpa peduli huruf besar dan spasi berlebih. Nama yang
+             *     tidak terdaftar, atau unit yang sudah dinonaktifkan, dijawab 422;
+             *     muat ulang daftar unit bila itu terjadi.
+             *
+             *     Bila tidak ada dokumen unit ini yang cukup relevan, balasannya
+             *     penolakan biasa (`kind: refusal`) yang menyebut unit tersebut dan
+             *     menyarankan memilih unit lain atau semua unit.
+             */
+            unit?: string | null;
         };
         /**
          * @description Isi kartu sitasi FE-2. Cukup untuk membuka PDF tepat di halamannya:
@@ -838,6 +911,21 @@ export interface components {
             unit: string;
             jam_layanan: string;
             kontak: string;
+        };
+        /** @description Satu pilihan di menu unit chatbot. */
+        UnitOut: {
+            /** @description Dikirim kembali apa adanya sebagai `unit` pada `POST /api/chat`. */
+            nama: string;
+            /** @description Kepanjangan atau cakupan layanan, untuk teks bantu di menu. */
+            deskripsi?: string | null;
+        };
+        /** @description Satu pertanyaan siap klik di menu topik chatbot. */
+        FaqQuestion: {
+            /**
+             * @description Dikirim apa adanya sebagai `question` pada `POST /api/chat`, bersama
+             *     unit topiknya.
+             */
+            pertanyaan: string;
         };
         ChatResponse: {
             kind: components["schemas"]["OutcomeKind"];
@@ -952,6 +1040,10 @@ export interface components {
              */
             file: string;
             judul: string;
+            /**
+             * @description Salah satu `nama` dari `GET /api/units`, tanpa peduli huruf besar.
+             *     Yang tersimpan selalu ejaan resmi; nama lain dijawab 422.
+             */
             unit: string;
             tahun_berlaku?: number | null;
             /** Format: date */
@@ -960,6 +1052,10 @@ export interface components {
         /** @description Hanya field yang dikirim yang diubah. */
         DocumentUpdate: {
             judul?: string;
+            /**
+             * @description Salah satu `nama` dari `GET /api/units`, tanpa peduli huruf besar.
+             *     Yang tersimpan selalu ejaan resmi; nama lain dijawab 422.
+             */
             unit?: string;
             tahun_berlaku?: number | null;
             /**
@@ -1034,6 +1130,10 @@ export interface components {
         FaqEntryCreate: {
             pertanyaan: string;
             jawaban: string;
+            /**
+             * @description Salah satu `nama` dari `GET /api/units`, tanpa peduli huruf besar.
+             *     Yang tersimpan selalu ejaan resmi; nama lain dijawab 422.
+             */
             unit: string;
             /** Format: date */
             valid_until?: string | null;
@@ -1042,6 +1142,10 @@ export interface components {
         FaqEntryUpdate: {
             pertanyaan?: string;
             jawaban?: string;
+            /**
+             * @description Salah satu `nama` dari `GET /api/units`, tanpa peduli huruf besar.
+             *     Yang tersimpan selalu ejaan resmi; nama lain dijawab 422.
+             */
             unit?: string;
             /**
              * Format: date
@@ -1153,6 +1257,11 @@ export interface components {
              *     pas. Tidak mengubah ambang yang berlaku bagi mahasiswa.
              */
             vector_threshold?: number | null;
+            /**
+             * @description Sama dengan `ChatRequest.unit`: uji apa yang dilihat mahasiswa yang
+             *     memilih unit ini di menu chatbot.
+             */
+            unit?: string | null;
         };
         /** @description Ambang yang benar-benar dipakai pada uji coba ini (FR-3). */
         ThresholdValues: {
@@ -1397,13 +1506,17 @@ export interface components {
             email: string;
             role: components["schemas"]["AdminRole"];
             nama?: string | null;
-            /** @description Wajib bila `role` bernilai `staf`. */
+            /**
+             * @description Wajib bila `role` bernilai `staf`. Salah satu `nama` dari
+             *     `GET /api/units`; nama lain dijawab 422.
+             */
             unit?: string | null;
         };
         /** @description Hanya field yang dikirim yang diubah. Field tak dikenal ditolak. */
         AdminUserUpdate: {
             nama?: string | null;
             role?: components["schemas"]["AdminRole"];
+            /** @description Salah satu `nama` dari `GET /api/units`; nama lain dijawab 422. */
             unit?: string | null;
             is_active?: boolean;
         };
@@ -1693,6 +1806,80 @@ export interface operations {
                     "application/json": components["schemas"]["Suggestion"][];
                 };
             };
+        };
+    };
+    list_units: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unit aktif */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "nama": "BAAK",
+                     *         "deskripsi": null
+                     *       },
+                     *       {
+                     *         "nama": "FO",
+                     *         "deskripsi": "Front Office"
+                     *       },
+                     *       {
+                     *         "nama": "Keuangan",
+                     *         "deskripsi": null
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["UnitOut"][];
+                };
+            };
+        };
+    };
+    list_faq_questions: {
+        parameters: {
+            query?: {
+                /**
+                 * @description `nama` dari `GET /api/units`, tanpa peduli huruf besar. Kosong =
+                 *     semua unit. Nama yang tidak terdaftar dijawab 422.
+                 */
+                unit?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pertanyaan, terbaru lebih dulu */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "pertanyaan": "Bagaimana cara membayar UKT lewat virtual account?"
+                     *       },
+                     *       {
+                     *         "pertanyaan": "Kapan batas akhir pembayaran UKT semester ganjil?"
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["FaqQuestion"][];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     get_document_file: {
