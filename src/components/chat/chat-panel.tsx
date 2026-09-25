@@ -8,7 +8,7 @@ import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
 import { AssistantMessage, BotBubble, UserMessage } from "./chat-message"
-import { FaqQuestions, TOPIK_LAIN, TopicMenu, topicReply } from "./topic-menu"
+import { FaqQuestions, TopicMenu, topicReply } from "./topic-menu"
 import { bannerEskalasiTerakhir, useChat } from "./use-chat"
 
 export const PANEL_ID = "asisten-administrasi"
@@ -55,7 +55,7 @@ export function ChatPanel({
   // pertanyaan langsung tersedia dengan pencarian ke semua unit -- chat tidak
   // boleh terkunci hanya karena daftar unit gagal dimuat.
   const [units, setUnits] = useState<Unit[] | null>(null)
-  // Pertanyaan siap klik per topik, kuncinya nama unit ("" = semua unit).
+  // Pertanyaan siap klik per topik, kuncinya nama unit.
   // Kunci yang belum ada = masih dimuat.
   const [faq, setFaq] = useState<Record<string, string[]>>({})
   const faqDiminta = useRef(new Set<string>())
@@ -96,7 +96,7 @@ export function ChatPanel({
   useEffect(() => {
     for (const entry of entries) {
       if (entry.role !== "topic") continue
-      const kunci = entry.unit ?? ""
+      const kunci = entry.unit
       if (faqDiminta.current.has(kunci)) continue
       faqDiminta.current.add(kunci)
       fetchFaqQuestions(entry.unit).then((items) =>
@@ -190,10 +190,10 @@ export function ChatPanel({
             return <UserMessage key={entry.id} text={entry.text} unit={entry.unit} />
           }
           if (entry.role === "topic") {
-            const questions = faq[entry.unit ?? ""]
+            const questions = faq[entry.unit]
             return (
               <Fragment key={entry.id}>
-                <UserMessage text={entry.unit ?? TOPIK_LAIN} unit={null} />
+                <UserMessage text={entry.unit} unit={null} />
                 <BotBubble
                   extra={
                     questions && (
@@ -230,7 +230,7 @@ export function ChatPanel({
           // satunya tombol untuk menggantinya.
           <div className={styles.scopeBar}>
             <span className={styles.scopeName}>
-              Topik: <strong>{unit ?? TOPIK_LAIN}</strong>
+              Topik: <strong>{unit}</strong>
             </span>
             <button
               type="button"

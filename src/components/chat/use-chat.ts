@@ -9,8 +9,8 @@ import { getSessionId } from "@/lib/session"
 export type ChatEntry =
   /** `unit`: unit yang dipilih saat pertanyaan ini dikirim; null = semua unit. */
   | { id: number; role: "user"; text: string; unit: string | null }
-  /** Topik yang diklik mahasiswa; null = "Topik lain" (semua unit). */
-  | { id: number; role: "topic"; unit: string | null }
+  /** Topik (unit) yang diklik mahasiswa. */
+  | { id: number; role: "topic"; unit: string }
   | { id: number; role: "assistant"; state: "pending"; stage: string | null }
   | { id: number; role: "assistant"; state: "streaming"; text: string }
   | { id: number; role: "assistant"; state: "done"; reply: StreamedReply }
@@ -177,7 +177,7 @@ export function useChat() {
   const feedback: FeedbackControls = { ratings, notes, rate, submitNote, dismissNote }
 
   /** Klik satu topik: dicatat sebagai giliran mahasiswa, lalu berlaku untuk pertanyaan berikutnya. */
-  function chooseTopic(pilihan: string | null) {
+  function chooseTopic(pilihan: string) {
     const id = nextId.current++
     setUnit(pilihan)
     setEntries((prev) => [...prev, { id, role: "topic", unit: pilihan }])

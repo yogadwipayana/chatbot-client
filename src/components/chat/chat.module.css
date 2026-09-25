@@ -607,9 +607,9 @@
   color: var(--text);
 }
 
-/* Ubin kategori seperti halaman FAQ, selebar panel (tidak menjorok di bawah
-   avatar). Selalu tiga kolom: sembilan unit tersusun rapi 3x3 di widget
-   maupun di /embed yang lebar, alih-alih baris terakhir yang timpang. */
+/* Tombol topik: nama unit saja, tiga kolom di widget dan /embed, dua kolom di
+   layar sempit (lihat media query di bawah). Seluruh daftar muat tanpa
+   digulir, jadi sapaan tetap terlihat di atasnya. */
 .topics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -619,63 +619,33 @@
 
 .topic {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
   min-width: 0;
-  padding: 12px 6px 10px;
+  min-height: 42px;
+  padding: 8px 10px;
   border: 1px solid var(--chat-line);
-  border-radius: 12px;
+  border-radius: 999px;
   background: #fff;
   color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
   text-align: center;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
 }
 
 .topic:hover {
-  border-color: #f1b5ad;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  border-color: var(--red);
+  background: #fff7f6;
+  color: var(--red);
 }
 
 .topic:focus-visible {
   outline: 2px solid var(--red);
   outline-offset: 2px;
-}
-
-.topicIcon {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: var(--chat-tint);
-  color: var(--red);
-  font-size: 16px;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.topicText {
-  display: grid;
-  flex: 1;
-  min-width: 0;
-}
-
-.topicName {
-  max-width: 100%;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-}
-
-.topicDesc {
-  font-size: 11px;
-  line-height: 1.25;
-  color: var(--muted);
-  overflow-wrap: anywhere;
 }
 
 .topicArrow {
@@ -688,30 +658,8 @@
 .topicActive,
 .topicActive:hover {
   border-color: var(--red);
-  background: #fff7f6;
-}
-
-.topicActive .topicIcon {
   background: var(--red);
   color: #fff;
-}
-
-/* "Topik lain" bukan unit: selebar menu, mendatar, dan berikon abu-abu,
-   supaya terbaca sebagai jalan keluar, bukan kategori kesepuluh. */
-.topicOther {
-  grid-column: 1 / -1;
-  flex-direction: row;
-  gap: 10px;
-  padding: 10px 12px;
-  text-align: left;
-}
-
-.topicOther .topicIcon {
-  width: 32px;
-  height: 32px;
-  background: #eef0f3;
-  color: var(--muted);
-  font-size: 13px;
 }
 
 /* --- Pertanyaan siap klik per topik -------------------------------------- */
@@ -904,6 +852,10 @@
 }
 
 @media (max-width: 575px) {
+  .topics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .launcher {
     width: 48px;
     padding: 0;
@@ -939,8 +891,7 @@
     transition: none;
   }
 
-  .launcher:hover,
-  .topic:hover {
+  .launcher:hover {
     transform: none;
   }
 }
