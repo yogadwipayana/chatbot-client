@@ -1,0 +1,11 @@
+.env
+.env.*
+!.env.example
+.git
+.next
+node_modules
+npm-debug.log*
+*.tsbuildinfo
+.kilo
+Dockerfile
+.dockerignore
