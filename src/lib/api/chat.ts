@@ -31,6 +31,8 @@ const TERPUTUS =
 
 export type StreamHandlers = {
   signal?: AbortSignal
+  /** Kunci situs penyemat (`X-Embed-Key`); kosong untuk portal sendiri. */
+  embedKey?: string
   /** Tahap yang sedang berjalan: "mencari dokumen", lalu "menyusun jawaban". */
   onStatus?: (stage: string) => void
   /**
@@ -44,9 +46,9 @@ export type StreamHandlers = {
 /** FE-1: kirim pertanyaan lewat `/api/chat/stream`. */
 export async function streamChat(
   body: ChatRequest,
-  { signal, onStatus, onToken }: StreamHandlers = {}
+  { signal, embedKey, onStatus, onToken }: StreamHandlers = {}
 ): Promise<StreamedReply> {
-  const response = await post("/api/chat/stream", body, body.session_id, signal)
+  const response = await post("/api/chat/stream", body, body.session_id, { signal, embedKey })
   if (!response.body) throw new ApiError(0, GAGAL_TERHUBUNG)
 
   let reply: ChatResponse | null = null
@@ -74,9 +76,10 @@ export async function streamChat(
 /** FE-5. Mengirim ulang untuk `message_id` yang sama mengganti penilaian sebelumnya. */
 export async function sendFeedback(
   body: Schemas["FeedbackRequest"],
-  sessionId: string
+  sessionId: string,
+  embedKey?: string
 ): Promise<void> {
-  await post("/api/feedback", body, sessionId)
+  await post("/api/feedback", body, sessionId, { embedKey })
 }
 
 /**
@@ -124,7 +127,7 @@ export async function fetchFaqQuestions(
     const response = await fetch(`${API_BASE_URL}/api/faq/questions${query}`, { signal })
     if (!response.ok) return []
     const data: unknown = await response.json()
-    return Array.isArray(data) ? (data as FaqQuestion[]).map((q) => q.pertanyaan) : []
+    return Array.isArray(data) ? (data as FaqQuestion[]).map((q) => q.question) : []
   } catch {
     return []
   }
@@ -132,25 +135,30 @@ export async function fetchFaqQuestions(
 
 /** FE-2: buka PDF sumber tepat di halaman yang dikutip. */
 export function citationUrl(citation: Citation): string {
-  return `${API_BASE_URL}/api/documents/${encodeURIComponent(citation.document_id)}/file#page=${citation.halaman}`
+  return `${API_BASE_URL}/api/documents/${encodeURIComponent(citation.document_id)}/file#page=${citation.page}`
 }
 
 async function post(
   path: string,
   body: unknown,
   sessionId: string,
-  signal?: AbortSignal
+  { signal, embedKey }: { signal?: AbortSignal; embedKey?: string } = {}
 ): Promise<Response> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    // Tanpa header ini batas laju jatuh ke per IP, yang di jaringan kampus
+    // dipakai bersama ratusan mahasiswa.
+    "X-Session-Id": sessionId,
+  }
+  // Situs yang kuncinya dinonaktifkan ditolak API (403) di pertanyaan
+  // berikutnya, termasuk dari panel yang sudah terbuka.
+  if (embedKey) headers["X-Embed-Key"] = embedKey
+
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // Tanpa header ini batas laju jatuh ke per IP, yang di jaringan kampus
-        // dipakai bersama ratusan mahasiswa.
-        "X-Session-Id": sessionId,
-      },
+      headers,
       body: JSON.stringify(body),
       signal,
     })

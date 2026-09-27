@@ -14,9 +14,11 @@ import { bannerEskalasiTerakhir, useChat } from "./use-chat"
 export const PANEL_ID = "asisten-administrasi"
 
 /**
- * Batas panjang pertanyaan. Jauh di bawah batas API (2000) dengan sengaja:
- * pencarian dokumen bekerja paling baik untuk satu pertanyaan pendek, dan
- * kotak sependek ini menolak curhat panjang sebelum terkirim, bukan sesudah.
+ * Batas panjang pertanyaan yang diketik. Di bawah batas API (500) dengan
+ * sengaja: pencarian dokumen bekerja paling baik untuk satu pertanyaan pendek,
+ * dan kotak sependek ini menolak curhat panjang sebelum terkirim, bukan
+ * sesudah. Batas API lebih longgar karena pertanyaan siap klik -- entri tanya
+ * jawab admin -- boleh sampai 500 karakter.
  */
 const MAKS_KARAKTER = 200
 
@@ -39,11 +41,14 @@ export function ChatPanel({
   open,
   onClose,
   className,
+  embedKey,
 }: {
   open: boolean
   /** Tanpa ini tidak ada tombol tutup -- `/embed` yang dibuka sebagai halaman penuh. */
   onClose?: () => void
   className: string
+  /** Kunci situs penyemat; hanya diisi panel `/embed` yang dimuat situs lain. */
+  embedKey?: string
 }) {
   const [draft, setDraft] = useState("")
   // Menu topik dibuka lagi lewat tombol "Ganti topik". Sembilan ubin yang
@@ -59,7 +64,7 @@ export function ChatPanel({
   // Kunci yang belum ada = masih dimuat.
   const [faq, setFaq] = useState<Record<string, string[]>>({})
   const faqDiminta = useRef(new Set<string>())
-  const { entries, busy, send, feedback, unit, chooseTopic } = useChat()
+  const { entries, busy, send, feedback, unit, chooseTopic } = useChat(embedKey)
   const bannerEskalasi = bannerEskalasiTerakhir(entries)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)

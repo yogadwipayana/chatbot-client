@@ -1,8 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { FaRobot } from "react-icons/fa"
 
 import styles from "./chat.module.css"
+import { BotBubble } from "./chat-message"
 import { ChatPanel } from "./chat-panel"
 
 /**
@@ -19,8 +21,12 @@ const PESAN_TUTUP = "asisten:tutup"
  * `widget` = dimuat `embed.js`, yang memegang tombol pembukanya; tombol tutup
  * di panel meminta skrip itu menyembunyikan iframe. Tanpanya halaman ini
  * dibuka langsung (tautan atau iframe biasa) dan tidak ada yang bisa ditutup.
+ *
+ * `embedKey` = kunci situs penyemat yang sudah diperiksa `src/proxy.ts`; ikut
+ * dikirim bersama setiap pertanyaan supaya API dapat menolaknya begitu kunci
+ * itu dinonaktifkan, juga saat panel ini sedang terbuka.
  */
-export function EmbeddedChat({ widget }: { widget: boolean }) {
+export function EmbeddedChat({ widget, embedKey }: { widget: boolean; embedKey?: string }) {
   // Iframe baru dibuat saat tombolnya pertama kali ditekan, jadi mulai terbuka.
   const [open, setOpen] = useState(true)
 
@@ -40,12 +46,49 @@ export function EmbeddedChat({ widget }: { widget: boolean }) {
 
   function close() {
     setOpen(false)
-    // Asal situs penyemat tidak diketahui -- bisa situs mana pun yang diizinkan
-    // `EMBED_ALLOWED_ORIGINS` -- jadi "*". Aman karena isinya hanya sinyal tutup.
+    // Asal situs penyemat tidak diketahui -- bisa situs mana pun yang
+    // terdaftar untuk kuncinya -- jadi "*". Aman karena isinya hanya sinyal tutup.
     window.parent.postMessage({ type: PESAN_TUTUP }, "*")
   }
 
   return (
-    <ChatPanel open={open} onClose={widget ? close : undefined} className={styles.embedded} />
+    <ChatPanel
+      open={open}
+      onClose={widget ? close : undefined}
+      className={styles.embedded}
+      embedKey={embedKey}
+    />
+  )
+}
+
+/**
+ * Pengganti panel saat kuncinya tidak dapat dipakai.
+ *
+ * Tetap ditampilkan di dalam iframe, bukan dibiarkan ditolak peramban: yang
+ * membukanya mahasiswa di situs orang lain, dan panel kosong tanpa penjelasan
+ * hanya membuatnya mengira asisten rusak.
+ */
+export function EmbedUnavailable({ status }: { status: "tidak-berlaku" | "gagal" }) {
+  return (
+    <section className={styles.embedded} aria-labelledby="asisten-tidak-tersedia">
+      <header className={styles.header}>
+        <span className={styles.headerAvatar} aria-hidden>
+          <FaRobot />
+        </span>
+        <div className={styles.heading}>
+          <h2 id="asisten-tidak-tersedia" className={styles.title}>
+            Asisten Administrasi
+          </h2>
+          <p className={styles.subtitle}>Menjawab dari dokumen resmi kampus</p>
+        </div>
+      </header>
+      <div className={styles.messages} role="alert">
+        <BotBubble tone="error">
+          {status === "tidak-berlaku"
+            ? "Asisten tidak tersedia di situs ini. Silakan hubungi pengelola situs, atau ajukan pertanyaan lewat portal akademik."
+            : "Asisten sedang tidak dapat dimuat. Coba lagi beberapa saat lagi."}
+        </BotBubble>
+      </div>
+    </section>
   )
 }

@@ -34,16 +34,16 @@ export function TopicMenu({
   return (
     <div id={id} className={styles.topics} role="group" aria-label="Pilih topik">
       {units.map((unit) => {
-        const aktif = active === unit.nama
+        const aktif = active === unit.name
         return (
           <button
-            key={unit.nama}
+            key={unit.name}
             type="button"
             className={cx(styles.topic, aktif && styles.topicActive)}
             aria-pressed={aktif}
-            onClick={() => onPick(unit.nama)}
+            onClick={() => onPick(unit.name)}
           >
-            {unit.nama}
+            {unit.name}
           </button>
         )
       })}

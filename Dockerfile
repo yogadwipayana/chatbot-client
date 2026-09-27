@@ -14,16 +14,15 @@ RUN npm ci --omit=dev
 
 # --- Build --------------------------------------------------------------------
 FROM base AS builder
-# NEXT_PUBLIC_* dan EMBED_ALLOWED_ORIGINS dibaca saat build: mengubahnya berarti
-# build ulang. Sumber nilainya, berurutan: build arg dari compose (.env root)
-# bila diisi, lalu .env aplikasi ini, lalu bawaan kode. NEXT_PUBLIC_API_BASE_URL
-# adalah alamat API yang dipanggil PERAMBAN.
+# NEXT_PUBLIC_* dibaca saat build: mengubahnya berarti build ulang. Sumber
+# nilainya, berurutan: build arg dari compose (.env root) bila diisi, lalu .env
+# aplikasi ini, lalu bawaan kode. NEXT_PUBLIC_API_BASE_URL adalah alamat API
+# yang dipanggil PERAMBAN. API_INTERNAL_URL (alamat API dari sisi server portal)
+# dibaca saat berjalan, jadi diatur di compose, bukan di sini.
 ARG NEXT_PUBLIC_API_BASE_URL=
-ARG EMBED_ALLOWED_ORIGINS=
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN [ -n "$NEXT_PUBLIC_API_BASE_URL" ] || unset NEXT_PUBLIC_API_BASE_URL; \
-    [ -n "$EMBED_ALLOWED_ORIGINS" ] || unset EMBED_ALLOWED_ORIGINS; \
     npm run build
 
 # --- Runtime ------------------------------------------------------------------

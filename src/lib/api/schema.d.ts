@@ -90,7 +90,7 @@ export interface paths {
         put?: never;
         /**
          * Kirim umpan balik atas satu jawaban
-         * @description FE-5: satu klik, tanpa modal. `catatan` opsional dan hanya muncul bila
+         * @description FE-5: satu klik, tanpa modal. `comment` opsional dan hanya muncul bila
          *     mahasiswa memilih mengisinya.
          *
          *     Mengirim ulang untuk `message_id` yang sama MENGGANTI umpan balik
@@ -143,7 +143,7 @@ export interface paths {
         };
         /**
          * Daftar unit layanan
-         * @description Isi menu pilihan unit di chatbot. `nama` dikirim kembali apa adanya
+         * @description Isi menu pilihan unit di chatbot. `name` dikirim kembali apa adanya
          *     sebagai `unit` pada `POST /api/chat` dan `/api/chat/stream`.
          *
          *     Hanya unit aktif, dalam urutan tampil yang diatur di tabel `units`.
@@ -185,6 +185,38 @@ export interface paths {
          *     `GET /api/units`.
          */
         get: operations["list_faq_questions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/embed/keys/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Situs yang boleh memuat panel untuk satu kunci sematan
+         * @description Dipanggil SERVER portal (`client/src/proxy.ts`) setiap kali halaman
+         *     `/embed?key=...` dimuat, bukan oleh peramban. `allowed_origins` menjadi
+         *     header `Content-Security-Policy: frame-ancestors` halaman itu, sehingga
+         *     peramban sendiri yang menolak menampilkan panel di situs lain. Daftar
+         *     kosong = situs mana pun.
+         *
+         *     Perubahan dari dashboard berlaku saat panel dibuka berikutnya, tanpa
+         *     build ulang portal.
+         *
+         *     Publik: kunci tertulis di kode sumber situs penyemat, dan daftar situsnya
+         *     dapat dilihat siapa pun yang membuka situs-situs itu. Tidak tunduk pada
+         *     kill switch -- panelnya tetap dimuat dan menyampaikan pesan penutupan
+         *     saat mahasiswa bertanya.
+         */
+        get: operations["get_embed_key"];
         put?: never;
         post?: never;
         delete?: never;
@@ -302,7 +334,7 @@ export interface paths {
          *     sistem menyebarkan info kedaluwarsa secara aktif. Badge ini mitigasinya,
          *     jadi jangan sembunyikan di balik filter.
          *
-         *     Staf/dosen hanya melihat dokumen unitnya; `total` dan `jumlah_stale` pun
+         *     Staf/dosen hanya melihat dokumen unitnya; `total` dan `stale_count` pun
          *     dihitung atas unit itu. Membuka, mengubah, menghapus, atau mengunggah
          *     dokumen unit lain dijawab 403. Nama unit dibandingkan tanpa peduli huruf
          *     besar dan spasi berlebih.
@@ -315,7 +347,8 @@ export interface paths {
          *     ekstraksi, chunking, embedding, simpan -- semuanya dalam satu transaksi.
          *     Dokumen yang gagal di tengah jalan tidak meninggalkan chunk yatim.
          *
-         *     PDF hasil scan tanpa lapisan teks ditolak dengan 422 (FR-1). Ini bukan
+         *     PDF tanpa lapisan teks (hasil scan, atau dicetak dengan Print to PDF yang
+         *     mengubah huruf menjadi garis gambar) ditolak dengan 422 (FR-1). Ini bukan
          *     kerewelan: chunk kosong tetap masuk indeks dan tidak pernah terambil,
          *     sehingga dokumen tampak terpasang padahal tidak berfungsi.
          *
@@ -361,7 +394,7 @@ export interface paths {
          *     Menonaktifkan dokumen TIDAK menghapus chunk-nya, sehingga dapat
          *     dikembalikan bila ternyata keliru.
          *
-         *     `updated_at` diperbarui saat `judul`, `unit`, `tahun_berlaku`, atau
+         *     `updated_at` diperbarui saat `title`, `unit`, `effective_year`, atau
          *     `valid_until` berubah -- itu dianggap peninjauan dan menghapus badge
          *     usia AD-2. Mengubah `is_active` saja tidak: menyalakan ulang dokumen
          *     lama tidak boleh menghapus peringatannya.
@@ -405,7 +438,7 @@ export interface paths {
          *
          *     Chatbot memperlakukannya persis seperti dokumen: ikut terambil retrieval
          *     hibrida, ikut berhenti dipakai saat `valid_until` lewat (FR-2), dan ikut
-         *     menjadi kartu sitasi -- dengan `jenis: tanya_jawab`, sehingga frontend
+         *     menjadi kartu sitasi -- dengan `type: tanya_jawab`, sehingga frontend
          *     tahu tidak ada berkas yang bisa dibuka.
          *
          *     Inilah jalan tercepat menutup pertanyaan tak terjawab (AD-4): tidak
@@ -458,12 +491,12 @@ export interface paths {
         head?: never;
         /**
          * Perbarui entri tanya jawab
-         * @description Mengubah `pertanyaan` atau `jawaban` membuang chunk lama dan menghitung
+         * @description Mengubah `question` atau `answer` membuang chunk lama dan menghitung
          *     ulang embedding-nya dalam transaksi yang sama. Indeks yang masih memuat
          *     kalimat versi lama akan menjawab mahasiswa dengan aturan yang sudah
          *     dicabut -- persis risiko yang diangkat PRD §12.
          *
-         *     `updated_at` diperbarui saat isi berubah (`pertanyaan`, `jawaban`,
+         *     `updated_at` diperbarui saat isi berubah (`question`, `answer`,
          *     `unit`, `valid_until`), tetapi tidak saat hanya `is_active` yang
          *     berubah -- sama seperti dokumen.
          */
@@ -543,8 +576,8 @@ export interface paths {
          *     ditelusuri ke pertanyaan yang memicunya, lalu diuji ulang lewat
          *     `POST /api/admin/test-query`.
          *
-         *     `catatan` jarang terisi: FE-5 satu klik tanpa modal, jadi sebagian besar
-         *     baris hanya berupa jempol. `pertanyaan` diambil dari pesan mahasiswa
+         *     `comment` jarang terisi: FE-5 satu klik tanpa modal, jadi sebagian besar
+         *     baris hanya berupa jempol. `question` diambil dari pesan mahasiswa
          *     terakhir sebelum jawaban itu di percakapan yang sama; untuk pertanyaan
          *     sensitif (FR-7) yang tersimpan adalah penanda tetap, bukan kalimat
          *     aslinya.
@@ -599,10 +632,10 @@ export interface paths {
         };
         /**
          * Statistik penggunaan dan biaya
-         * @description AD-5. Termasuk `biaya_usd_berjalan` -- PRD §12 menandai biaya API
+         * @description AD-5. Termasuk `running_cost_usd` -- PRD §12 menandai biaya API
          *     membengkak sebagai risiko dengan dampak layanan mati mendadak.
          *
-         *     `total_percakapan` disajikan sebagai konteks, bukan sebagai ukuran
+         *     `total_conversations` disajikan sebagai konteks, bukan sebagai ukuran
          *     keberhasilan. PRD §3 menetapkannya sebagai anti-metrik.
          *
          *     Tanpa parameter: 30 hari terakhir sampai hari ini. Hari dihitung menurut
@@ -637,6 +670,89 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/logs/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ringkasan performa pipeline chat
+         * @description Dibaca dari SQLite log (`LOG_DB_PATH`), bukan Postgres. KPI giliran, p50/p95
+         *     durasi per node LangGraph, distribusi titik keluar, dan tren per jam (UTC).
+         *     Untuk role admin, log `app.audit` tidak ikut dihitung di `error_log_count`.
+         */
+        get: operations["log_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/logs/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar giliran chat
+         * @description Terbaru lebih dulu. Tanpa teks pertanyaan/jawaban; buka lewat `message_id`.
+         */
+        get: operations["list_turns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/logs/turns/{turn_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detail satu giliran chat
+         * @description Node yang berjalan beserta durasi dan detailnya, plus log selama giliran itu.
+         */
+        get: operations["get_turn"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/logs/app": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Log aplikasi
+         * @description Log Python logger `app.*`. Log `app.audit` hanya untuk superadmin; role admin
+         *     yang memfilter `logger=app.audit` mendapat daftar kosong, bukan 403.
+         */
+        get: operations["list_app_logs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/kill-switch": {
         parameters: {
             query?: never;
@@ -655,7 +771,7 @@ export interface paths {
          * @description FR-9. Mematikan layanan chat dengan cepat saat insiden, tanpa menunggu
          *     deploy ulang.
          *
-         *     `alasan` wajib diisi saat menyalakan: insiden tanpa catatan alasan tidak
+         *     `reason` wajib diisi saat menyalakan: insiden tanpa catatan alasan tidak
          *     bisa diaudit setelahnya. Dashboard admin tetap hidup saat kill switch
          *     aktif -- justru saat itulah admin perlu masuk untuk melihat apa yang
          *     terjadi.
@@ -678,13 +794,13 @@ export interface paths {
         };
         /**
          * Setelan retrieval dan chunking yang berlaku
-         * @description Parameter FR-1/FR-2/FR-3 yang dipakai layanan saat ini (`nilai`), beserta
-         *     nilai `.env` server sebagai pembandingnya (`nilai_env`) dan daftar
-         *     parameter yang sedang ditimpa dari dashboard (`diubah`).
+         * @description Parameter FR-1/FR-2/FR-3 yang dipakai layanan saat ini (`values`), beserta
+         *     nilai `.env` server sebagai pembandingnya (`env_values`) dan daftar
+         *     parameter yang sedang ditimpa dari dashboard (`overridden`).
          *
          *     Nama model dan endpoint ikut dikirim sebagai keterangan saja -- mengganti
          *     model embedding menuntut re-index seluruh dokumen, jadi ia tetap hanya
-         *     lewat `.env`. Kunci API tidak pernah dikirim; hanya `api_key_terisi`.
+         *     lewat `.env`. Kunci API tidak pernah dikirim; hanya `api_key_set`.
          */
         get: operations["get_runtime_config"];
         put?: never;
@@ -773,7 +889,7 @@ export interface paths {
         /**
          * Buat akun dashboard
          * @description Kata sandi dibangkitkan server dan dikembalikan SEKALI sebagai
-         *     `password_sementara`. Superadmin tidak memilih kata sandi orang lain,
+         *     `temporary_password`. Superadmin tidak memilih kata sandi orang lain,
          *     sehingga tidak ada yang mengetahui kata sandi akhir selain pemiliknya
          *     setelah ia menggantinya.
          */
@@ -836,25 +952,140 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/units": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar semua unit layanan
+         * @description Termasuk unit nonaktif, dalam urutan menu, beserta jumlah dokumen dan
+         *     akun yang memakainya. Untuk isian unit gunakan `GET /api/units`, yang
+         *     hanya memuat unit aktif.
+         */
+        get: operations["list_admin_units"];
+        put?: never;
+        /**
+         * Tambah unit layanan
+         * @description Unit baru langsung aktif: tampil di menu chatbot dan dapat dipilih untuk
+         *     dokumen, entri tanya jawab, dan akun staf. `sort_order` kosong = paling akhir.
+         */
+        post: operations["create_unit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/units/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Ubah nama, deskripsi, urutan, atau status aktif unit
+         * @description Nama baru ikut tersimpan di setiap dokumen dan akun unit itu
+         *     (`ON UPDATE CASCADE`). Unit tidak dapat dihapus; menonaktifkannya
+         *     menyembunyikan unit dari menu chatbot dan dari pilihan isian baru,
+         *     sementara dokumen dan akunnya tetap ada.
+         */
+        patch: operations["update_unit"];
+        trace?: never;
+    };
+    "/api/admin/embed-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daftar kunci sematan
+         * @description Semua kunci, termasuk yang nonaktif, urut dari yang paling lama dibuat,
+         *     beserta jumlah pertanyaan 30 hari terakhir dan waktu pertanyaan terakhir
+         *     dari situs itu.
+         */
+        get: operations["list_embed_keys"];
+        put?: never;
+        /**
+         * Buat kunci sematan untuk satu situs
+         * @description Kuncinya dibuat server dan langsung aktif. Balasan membawa
+         *     `embed_code` siap tempel.
+         */
+        post: operations["create_embed_key"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/embed-keys/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Hapus kunci sematan secara permanen
+         * @description Situs yang masih memasangnya harus diberi kunci baru. Percakapan dari
+         *     situs itu tetap tersimpan, hanya tidak lagi tertaut ke kunci mana pun.
+         *     Untuk menghentikan sementara, nonaktifkan lewat PATCH.
+         */
+        delete: operations["delete_embed_key"];
+        options?: never;
+        head?: never;
+        /**
+         * Ubah nama, daftar situs, atau status aktif kunci sematan
+         * @description Berlaku saat panel dibuka berikutnya. Kunci yang dinonaktifkan juga
+         *     menolak pertanyaan dari panel yang sedang terbuka (403). Kuncinya sendiri
+         *     tidak berubah, jadi situs penyemat tidak perlu mengganti kodenya.
+         */
+        patch: operations["update_embed_key"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
          * @description Menentukan cara frontend menampilkan balasan. Hanya `answer` yang
-         *     membawa sitasi; `refusal`, `support`, dan `smalltalk` tidak pernah.
+         *     membawa sitasi; `refusal`, `support`, `smalltalk`, dan `rejected`
+         *     tidak pernah.
          * @enum {string}
          */
-        OutcomeKind: "answer" | "refusal" | "support" | "smalltalk";
+        OutcomeKind: "answer" | "refusal" | "support" | "smalltalk" | "rejected";
         TurnIn: {
             /** @description `system` sengaja tidak diterima -- itu jalur injeksi. */
             role: string;
-            konten: string;
+            /**
+             * @description Dipotong server menjadi 2000 karakter pertama, bukan ditolak: awal
+             *     jawaban sudah cukup sebagai konteks pertanyaan lanjutan.
+             */
+            content: string;
         };
         ChatRequest: {
             /**
              * @description Pertanyaan apa adanya. Server yang menyanitasi dan membungkusnya
              *     dengan delimiter; klien tidak perlu (dan tidak boleh) ikut memproses.
+             *
+             *     500 = panjang maksimum pertanyaan siap klik (entri tanya jawab admin).
+             *     Kotak pertanyaan portal sendiri membatasi 200.
              */
             question: string;
             /**
@@ -864,13 +1095,13 @@ export interface components {
             session_id: string;
             /**
              * @description Riwayat percakapan. Hanya 3 pesan terakhir yang dipakai untuk
-             *     penulisan ulang query (FR-4); mengirim lebih banyak tidak menambah
-             *     ketepatan tetapi menaikkan biaya.
+             *     penulisan ulang query (FR-4); sisanya dibuang server, dan lebih dari
+             *     50 ditolak 422.
              * @default []
              */
             history: components["schemas"]["TurnIn"][];
             /**
-             * @description `nama` dari `GET /api/units`. Retrieval -- vektor maupun fulltext --
+             * @description `name` dari `GET /api/units`. Retrieval -- vektor maupun fulltext --
              *     hanya mencari di dokumen unit ini. Kosongkan atau kirim null untuk
              *     mencari di semua unit.
              *
@@ -886,11 +1117,11 @@ export interface components {
         };
         /**
          * @description Isi kartu sitasi FE-2. Cukup untuk membuka PDF tepat di halamannya:
-         *     `GET /api/documents/{document_id}/file#page={halaman}`.
+         *     `GET /api/documents/{document_id}/file#page={page}`.
          */
         CitationOut: {
-            judul: string;
-            halaman: number;
+            title: string;
+            page: number;
             /** Format: uuid */
             document_id: string;
             /**
@@ -904,20 +1135,20 @@ export interface components {
              *     dan tanpa "hal. N".
              * @default pdf
              */
-            jenis: components["schemas"]["JenisDokumen"];
+            type: components["schemas"]["DocumentType"];
         };
         /** @description Isi banner eskalasi FE-3. */
         ContactOut: {
             unit: string;
-            jam_layanan: string;
-            kontak: string;
+            service_hours: string;
+            contact: string;
         };
         /** @description Satu pilihan di menu unit chatbot. */
         UnitOut: {
             /** @description Dikirim kembali apa adanya sebagai `unit` pada `POST /api/chat`. */
-            nama: string;
+            name: string;
             /** @description Kepanjangan atau cakupan layanan, untuk teks bantu di menu. */
-            deskripsi?: string | null;
+            description?: string | null;
         };
         /** @description Satu pertanyaan siap klik di menu topik chatbot. */
         FaqQuestion: {
@@ -925,7 +1156,7 @@ export interface components {
              * @description Dikirim apa adanya sebagai `question` pada `POST /api/chat`, bersama
              *     unit topiknya.
              */
-            pertanyaan: string;
+            question: string;
         };
         ChatResponse: {
             kind: components["schemas"]["OutcomeKind"];
@@ -970,10 +1201,10 @@ export interface components {
             message_id: string;
             /** @description true = 👍, false = 👎 */
             helpful: boolean;
-            catatan?: string | null;
+            comment?: string | null;
         };
         Suggestion: {
-            teks: string;
+            text: string;
         };
         HealthResponse: {
             /** @constant */
@@ -997,9 +1228,9 @@ export interface components {
         Document: {
             /** Format: uuid */
             id: string;
-            judul: string;
+            title: string;
             unit: string;
-            tahun_berlaku?: number | null;
+            effective_year?: number | null;
             /**
              * Format: date
              * @description null berarti berlaku tanpa batas. Lewat tanggal ini, dokumen
@@ -1010,7 +1241,7 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
             is_active: boolean;
-            jumlah_chunk: number;
+            chunk_count: number;
             /**
              * @description Badge peringatan AD-2: lebih dari 6 bulan tidak diperbarui, atau
              *     sudah lewat `valid_until`.
@@ -1031,7 +1262,7 @@ export interface components {
              *     lencana angka di navigasi AD-2. Dokumen nonaktif tidak dihitung
              *     karena sudah tidak terambil retrieval.
              */
-            jumlah_stale: number;
+            stale_count: number;
         };
         DocumentUpload: {
             /**
@@ -1039,25 +1270,25 @@ export interface components {
              * @description Berkas PDF.
              */
             file: string;
-            judul: string;
+            title: string;
             /**
-             * @description Salah satu `nama` dari `GET /api/units`, tanpa peduli huruf besar.
+             * @description Salah satu `name` dari `GET /api/units`, tanpa peduli huruf besar.
              *     Yang tersimpan selalu ejaan resmi; nama lain dijawab 422.
              */
             unit: string;
-            tahun_berlaku?: number | null;
+            effective_year?: number | null;
             /** Format: date */
             valid_until?: string | null;
         };
         /** @description Hanya field yang dikirim yang diubah. */
         DocumentUpdate: {
-            judul?: string;
+            title?: string;
             /**
-             * @description Salah satu `nama` dari `GET /api/units`, tanpa peduli huruf besar.
+             * @description Salah satu `name` dari `GET /api/units`, tanpa peduli huruf besar.
              *     Yang tersimpan selalu ejaan resmi; nama lain dijawab 422.
              */
             unit?: string;
-            tahun_berlaku?: number | null;
+            effective_year?: number | null;
             /**
              * Format: date
              * @description Kirim null untuk menjadikan dokumen berlaku tanpa batas.
@@ -1068,22 +1299,22 @@ export interface components {
         IngestionResult: {
             /** Format: uuid */
             document_id: string;
-            jumlah_halaman: number;
-            jumlah_chunk: number;
+            page_count: number;
+            chunk_count: number;
             /**
              * @description Catatan mutu dokumen yang baru diunggah -- mis. teks yang terbaca
              *     sangat sedikit karena isinya didominasi tangkapan layar. Bukan
              *     galat: unggahan tetap berhasil. Tiap entri berupa kalimat siap
              *     tampil untuk admin.
              */
-            peringatan?: string[];
+            warnings?: string[];
         };
         Chunk: {
             /** Format: uuid */
             id: string;
-            konten: string;
-            halaman: number;
-            urutan: number;
+            content: string;
+            page: number;
+            position: number;
         };
         /**
          * @description Asal isi sebuah sumber. `pdf`: berkas resmi yang diunggah admin, punya
@@ -1092,13 +1323,13 @@ export interface components {
          *     dibuat sebagai tautan.
          * @enum {string}
          */
-        JenisDokumen: "pdf" | "tanya_jawab";
+        DocumentType: "pdf" | "tanya_jawab";
         FaqEntry: {
             /** Format: uuid */
             id: string;
             /** @description Sekaligus judul sumber pada kartu sitasi yang dilihat mahasiswa. */
-            pertanyaan: string;
-            jawaban: string;
+            question: string;
+            answer: string;
             unit: string;
             /**
              * Format: date
@@ -1113,7 +1344,7 @@ export interface components {
              * @description Jawaban pendek menjadi satu potongan; jawaban panjang dipecah, dan
              *     setiap potongan tetap membawa pertanyaannya.
              */
-            jumlah_chunk: number;
+            chunk_count: number;
             /**
              * @description Sama dengan dokumen: lebih dari 6 bulan tidak diperbarui, atau sudah
              *     lewat masa berlaku.
@@ -1128,10 +1359,10 @@ export interface components {
             total: number;
         };
         FaqEntryCreate: {
-            pertanyaan: string;
-            jawaban: string;
+            question: string;
+            answer: string;
             /**
-             * @description Salah satu `nama` dari `GET /api/units`, tanpa peduli huruf besar.
+             * @description Salah satu `name` dari `GET /api/units`, tanpa peduli huruf besar.
              *     Yang tersimpan selalu ejaan resmi; nama lain dijawab 422.
              */
             unit: string;
@@ -1140,10 +1371,10 @@ export interface components {
         };
         /** @description Hanya field yang dikirim yang diubah. */
         FaqEntryUpdate: {
-            pertanyaan?: string;
-            jawaban?: string;
+            question?: string;
+            answer?: string;
             /**
-             * @description Salah satu `nama` dari `GET /api/units`, tanpa peduli huruf besar.
+             * @description Salah satu `name` dari `GET /api/units`, tanpa peduli huruf besar.
              *     Yang tersimpan selalu ejaan resmi; nama lain dijawab 422.
              */
             unit?: string;
@@ -1159,21 +1390,21 @@ export interface components {
         };
         UnansweredGroup: {
             /**
-             * @description Seluruh baris `unanswered` dalam kelompok. Menandai kelompok selesai
+             * @description Seluruh baris `unanswered_questions` dalam kelompok. Menandai kelompok selesai
              *     berarti PATCH `/api/admin/unanswered/{id}` untuk setiap id.
              */
             ids: string[];
             /** @description Satu pertanyaan mewakili kelompok, apa adanya seperti diketik. */
-            contoh_pertanyaan: string;
-            jumlah: number;
+            sample_question: string;
+            count: number;
             /**
              * @description Rata-rata skor tertinggi kelompok ini. Nilai yang mendekati ambang
              *     menandakan dokumennya mungkin sudah ada tetapi retrieval-nya meleset;
              *     nilai sangat rendah menandakan dokumennya memang belum ada.
              */
-            top_score_rata2?: number | null;
+            avg_top_score?: number | null;
             /** Format: date-time */
-            terakhir_ditanyakan: string;
+            last_asked_at: string;
             resolved: boolean;
         };
         /** @description Satu penilaian FE-5 beserta pasangan pertanyaan-jawaban yang dinilai. */
@@ -1189,18 +1420,18 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             /** @description Isi jawaban chatbot apa adanya. */
-            jawaban: string;
+            answer: string;
             /**
              * @description Isian bebas mahasiswa. FE-5 satu klik tanpa modal, jadi sebagian
              *     besar umpan balik tidak memilikinya.
              */
-            catatan?: string | null;
+            comment?: string | null;
             /**
              * @description Pesan mahasiswa terakhir sebelum jawaban ini. Null bila pesannya
              *     sudah terhapus dari log. Pertanyaan sensitif (FR-7) berisi penanda
              *     tetap, bukan kalimat aslinya.
              */
-            pertanyaan?: string | null;
+            question?: string | null;
             /**
              * @description `messages.meta.kind` apa adanya. Sengaja bukan enum tertutup: nilai
              *     baru di backend tidak boleh membuat halaman ini gagal memuat.
@@ -1213,12 +1444,12 @@ export interface components {
             items: components["schemas"]["FeedbackItem"][];
             /** @description Jumlah baris yang cocok dengan seluruh filter, untuk penomoran halaman. */
             total: number;
-            jumlah_positif: number;
+            positive_count: number;
             /**
              * @description Keduanya dihitung mengabaikan filter `helpful`, sehingga jumlah pada
              *     kedua tab tetap terlihat saat salah satunya sedang dipilih.
              */
-            jumlah_negatif: number;
+            negative_count: number;
         };
         /** @description Rincian diagnosa AD-6. */
         RetrievedChunk: {
@@ -1226,11 +1457,11 @@ export interface components {
             chunk_id: string;
             /** Format: uuid */
             document_id?: string | null;
-            judul: string;
+            title: string;
             /** @default pdf */
-            jenis: components["schemas"]["JenisDokumen"];
-            halaman: number;
-            konten: string;
+            type: components["schemas"]["DocumentType"];
+            page: number;
+            content: string;
             /** @description Skor gabungan. Berbasis peringkat -- jangan pakai untuk menilai relevansi. */
             rrf_score: number;
             /**
@@ -1283,7 +1514,7 @@ export interface components {
                 top_vector_score?: number | null;
                 top_lexical_score?: number | null;
             } | null;
-            ambang: components["schemas"]["ThresholdValues"];
+            thresholds: components["schemas"]["ThresholdValues"];
             /** @description Kontak yang akan dilihat mahasiswa untuk pertanyaan yang sama (FE-3, FE-4). */
             contacts: components["schemas"]["ContactOut"][];
             escalated: boolean;
@@ -1293,8 +1524,8 @@ export interface components {
         };
         DailyVolume: {
             /** Format: date */
-            tanggal: string;
-            jumlah: number;
+            date: string;
+            count: number;
         };
         TopicCount: {
             /**
@@ -1302,8 +1533,8 @@ export interface components {
              *     `pembayaran`, `sanksi`, `drop_out`. Label tampilan diserahkan ke
              *     frontend.
              */
-            topik: string;
-            jumlah: number;
+            topic: string;
+            count: number;
         };
         /** @description Jumlah balasan per `kind` dalam rentang. */
         KindBreakdown: {
@@ -1315,38 +1546,40 @@ export interface components {
              *     disandingkan dengan `answer` seolah keduanya setara.
              */
             smalltalk: number;
+            /** @description Dihentikan gerbang JEV (nonsense, manipulasi, di luar topik). */
+            rejected: number;
         };
         Stats: {
             /** Format: date */
-            sejak: string;
+            since: string;
             /** Format: date */
-            sampai: string;
+            until: string;
             /**
              * @description Konteks, BUKAN ukuran keberhasilan. PRD §3 menetapkannya sebagai
              *     anti-metrik: volume tinggi bisa berarti jawabannya buruk sehingga
              *     mahasiswa bertanya berulang kali. Satu percakapan = pesan dari
              *     `session_id` yang sama dengan jeda di bawah 30 menit.
              */
-            total_percakapan: number;
-            total_pertanyaan: number;
-            rincian_jenis: components["schemas"]["KindBreakdown"];
-            jumlah_feedback: number;
+            total_conversations: number;
+            total_questions: number;
+            kind_breakdown: components["schemas"]["KindBreakdown"];
+            feedback_count: number;
             /** @description Target PRD §3 >= 0.75. null bila belum ada umpan balik. */
-            rasio_feedback_positif: number | null;
+            positive_feedback_ratio: number | null;
             /** @description Target PRD §3 < 0.15. null bila belum ada pertanyaan. */
-            rasio_tak_terjawab: number | null;
+            unanswered_ratio: number | null;
             /** @description Satu entri per hari dalam rentang, termasuk hari tanpa pertanyaan. */
-            volume_harian: components["schemas"]["DailyVolume"][];
-            topik_populer: components["schemas"]["TopicCount"][];
+            daily_volume: components["schemas"]["DailyVolume"][];
+            top_topics: components["schemas"]["TopicCount"][];
             /** @description Estimasi dari token terpakai, bukan dari API penagihan. */
-            biaya_usd_berjalan: number;
+            running_cost_usd: number;
             /**
              * @description Jawaban yang memanggil LLM tetapi modelnya belum punya tarif di
              *     `app/observability/costs.py`. Lebih dari nol berarti
-             *     `biaya_usd_berjalan` KURANG dari biaya sebenarnya -- tampilkan
+             *     `running_cost_usd` KURANG dari biaya sebenarnya -- tampilkan
              *     sebagai peringatan, jangan sebagai biaya nol.
              */
-            pesan_tanpa_estimasi_biaya: number;
+            messages_without_cost_estimate: number;
             /**
              * @description Persentil 95 waktu proses jawaban lengkap. Target PRD §11 (first
              *     token < 3000 ms) diukur di LangSmith; angka ini batas atasnya.
@@ -1355,52 +1588,155 @@ export interface components {
         };
         CostByModel: {
             /** @enum {string} */
-            jenis: "llm_chat" | "embedding_chat" | "embedding_ingestion";
+            type: "llm_chat" | "embedding_chat";
             model: string;
-            jumlah_panggilan: number;
+            call_count: number;
             input_tokens: number;
             output_tokens: number;
             tokens: number;
-            biaya_usd: number;
+            cost_usd: number;
         };
         DailyCost: {
             /** Format: date */
-            tanggal: string;
-            jumlah_panggilan: number;
+            date: string;
+            call_count: number;
             llm_tokens: number;
             embed_tokens: number;
-            biaya_llm_usd: number;
-            biaya_embedding_usd: number;
-            biaya_ingestion_usd: number;
-            biaya_usd: number;
+            llm_cost_usd: number;
+            embedding_cost_usd: number;
+            cost_usd: number;
         };
         Costs: {
             /** Format: date */
-            sejak: string;
+            since: string;
             /** Format: date */
-            sampai: string;
-            jumlah_panggilan_llm: number;
+            until: string;
+            llm_call_count: number;
             input_tokens: number;
             output_tokens: number;
             total_tokens: number;
-            biaya_usd: number;
-            biaya_llm_usd: number;
-            embed_chat_tokens: number;
-            biaya_embed_chat_usd: number;
-            jumlah_embed_chat: number;
-            usage_log_tokens: number;
-            biaya_usage_log_usd: number;
-            jumlah_usage_log: number;
-            llm_tanpa_biaya: number;
-            embed_chat_tanpa_biaya: number;
-            usage_log_tanpa_biaya: number;
-            rincian_model: components["schemas"]["CostByModel"][];
-            biaya_harian: components["schemas"]["DailyCost"][];
+            cost_usd: number;
+            llm_cost_usd: number;
+            chat_embed_tokens: number;
+            chat_embed_cost_usd: number;
+            chat_embed_count: number;
+            llm_calls_without_cost: number;
+            chat_embeds_without_cost: number;
+            model_breakdown: components["schemas"]["CostByModel"][];
+            daily_costs: components["schemas"]["DailyCost"][];
+        };
+        LogSummary: {
+            since: string;
+            until: string;
+            turn_count: number;
+            p50_total_ms: number | null;
+            p95_total_ms: number | null;
+            error_turn_count: number;
+            error_ratio: number;
+            jev_blocked_count: number;
+            jev_blocked_ratio: number;
+            /** @description Log ERROR ke atas. Untuk role admin, log audit tidak dihitung. */
+            error_log_count: number;
+            per_node: components["schemas"]["NodeStat"][];
+            exit_points: components["schemas"]["ExitPoint"][];
+            per_hour: components["schemas"]["HourlyLogStat"][];
+        };
+        NodeStat: {
+            node: string;
+            count: number;
+            p50_ms: number | null;
+            p95_ms: number | null;
+            error: number;
+        };
+        ExitPoint: {
+            /** @description Node terakhir yang berjalan, yaitu tempat giliran berhenti. */
+            node: string;
+            count: number;
+        };
+        HourlyLogStat: {
+            /** @description Awal jam, UTC, mis. `2026-09-25T03:00:00Z`. */
+            hour: string;
+            turn_count: number;
+            p95_total_ms: number | null;
+            error_turn_count: number;
+            error_log_count: number;
+        };
+        TurnOut: {
+            turn_id: string;
+            timestamp: string;
+            /** @enum {string} */
+            endpoint: "chat" | "chat_stream";
+            session_id: string | null;
+            /** @description Tautan ke `messages` di Postgres; teks percakapan hanya ada di sana. */
+            message_id: string | null;
+            unit: string | null;
+            outcome: string | null;
+            last_node: string | null;
+            total_ms: number | null;
+            /** @description Waktu sampai token pertama; hanya untuk chat_stream yang memanggil LLM. */
+            ttft_ms: number | null;
+            /** @enum {string} */
+            status: "ok" | "error" | "dibatalkan";
+            langsmith_run_id: string | null;
+        };
+        TurnPage: {
+            total: number;
+            items: components["schemas"]["TurnOut"][];
+        };
+        NodeRunOut: {
+            node: string;
+            position: number;
+            started_at: string;
+            duration_ms: number;
+            /** @enum {string} */
+            status: "ok" | "error";
+            error_type: string | null;
+            error_message: string | null;
+            detail: {
+                [key: string]: unknown;
+            };
+        };
+        AppLogOut: {
+            id: number;
+            timestamp: string;
+            level: string;
+            logger: string;
+            message: string;
+            location: string | null;
+            traceback: string | null;
+            turn_id: string | null;
+        };
+        /** @description TurnOut ditambah node dan log giliran itu. */
+        TurnDetail: {
+            turn_id: string;
+            timestamp: string;
+            /** @enum {string} */
+            endpoint: "chat" | "chat_stream";
+            session_id: string | null;
+            /** @description Tautan ke `messages` di Postgres; teks percakapan hanya ada di sana. */
+            message_id: string | null;
+            unit: string | null;
+            outcome: string | null;
+            last_node: string | null;
+            total_ms: number | null;
+            /** @description Waktu sampai token pertama; hanya untuk chat_stream yang memanggil LLM. */
+            ttft_ms: number | null;
+            /** @enum {string} */
+            status: "ok" | "error" | "dibatalkan";
+            langsmith_run_id: string | null;
+            nodes: components["schemas"]["NodeRunOut"][];
+            /** @description Log yang muncul selama giliran ini berjalan. */
+            logs: components["schemas"]["AppLogOut"][];
+        };
+        AppLogPage: {
+            total: number;
+            items: components["schemas"]["AppLogOut"][];
+            loggers: string[];
         };
         KillSwitchRequest: {
             engaged: boolean;
             /** @description Wajib diisi (bukan spasi saja) saat `engaged` true. Diabaikan saat false. */
-            alasan?: string | null;
+            reason?: string | null;
         };
         KillSwitchState: {
             engaged: boolean;
@@ -1436,6 +1772,12 @@ export interface components {
             chunk_size: number;
             /** @description Tumpang tindih antar potongan saat satu bagian harus dipecah. */
             chunk_overlap: number;
+            /**
+             * @description Pertanyaan per hari dari semua sumber (zona `TIMEZONE`). Terlampaui =
+             *     kill switch menyala otomatis sampai superadmin menyalakan layanan
+             *     lagi. 0 = tanpa batas.
+             */
+            chat_daily_limit: number;
         };
         /**
          * @description Hanya field yang dikirim yang diubah; `null` mengembalikan field itu ke
@@ -1452,29 +1794,30 @@ export interface components {
             lexical_threshold?: number | null;
             chunk_size?: number | null;
             chunk_overlap?: number | null;
+            chat_daily_limit?: number | null;
         };
         RuntimeConfig: {
             /** @description Yang dipakai layanan saat ini. */
-            nilai: components["schemas"]["RuntimeConfigValues"];
+            values: components["schemas"]["RuntimeConfigValues"];
             /** @description Yang tertulis di `.env` server. */
-            nilai_env: components["schemas"]["RuntimeConfigValues"];
+            env_values: components["schemas"]["RuntimeConfigValues"];
             /** @description Nama parameter yang sedang ditimpa dari dashboard. */
-            diubah: string[];
+            overridden: string[];
             chat_model: string;
             embed_model: string;
             /** @description Endpoint OpenAI-compatible; kosong berarti OpenAI resmi. */
             base_url?: string | null;
             /** @description Kuncinya sendiri tidak pernah dikirim ke peramban. */
-            api_key_terisi: boolean;
+            api_key_set: boolean;
             /** Format: date-time */
-            diperbarui_at?: string | null;
-            diperbarui_oleh?: string | null;
+            updated_at?: string | null;
+            updated_by?: string | null;
             /**
              * @description Terisi bila nilai tersimpan tidak dapat dipakai (mis. `.env` berubah
              *     sehingga kombinasinya melanggar aturan) dan layanan sementara
              *     kembali ke `.env`.
              */
-            peringatan?: string | null;
+            warning?: string | null;
         };
         /**
          * @description Level bertingkat; setiap level mencakup hak level di bawahnya. `staf`
@@ -1490,7 +1833,7 @@ export interface components {
             email: string;
             role: components["schemas"]["AdminRole"];
             is_active: boolean;
-            nama?: string | null;
+            name?: string | null;
             /**
              * @description Wajib untuk `staf`: membatasi dokumen yang dapat dikelola. Untuk level
              *     lain hanya keterangan.
@@ -1505,33 +1848,102 @@ export interface components {
             /** Format: email */
             email: string;
             role: components["schemas"]["AdminRole"];
-            nama?: string | null;
+            name?: string | null;
             /**
-             * @description Wajib bila `role` bernilai `staf`. Salah satu `nama` dari
+             * @description Wajib bila `role` bernilai `staf`. Salah satu `name` dari
              *     `GET /api/units`; nama lain dijawab 422.
              */
             unit?: string | null;
         };
         /** @description Hanya field yang dikirim yang diubah. Field tak dikenal ditolak. */
         AdminUserUpdate: {
-            nama?: string | null;
+            name?: string | null;
             role?: components["schemas"]["AdminRole"];
-            /** @description Salah satu `nama` dari `GET /api/units`; nama lain dijawab 422. */
+            /** @description Salah satu `name` dari `GET /api/units`; nama lain dijawab 422. */
             unit?: string | null;
             is_active?: boolean;
         };
         AdminUserCreated: {
             user: components["schemas"]["AdminUser"];
             /** @description Ditampilkan SEKALI dan tidak dapat diambil lagi. */
-            password_sementara: string;
+            temporary_password: string;
         };
         TemporaryPassword: {
-            password_sementara: string;
+            temporary_password: string;
+        };
+        /** @description Satu unit layanan, termasuk yang nonaktif. */
+        AdminUnit: {
+            /** @description Kunci utama; nilai yang tersimpan di `documents.unit` dan `admins.unit`. */
+            name: string;
+            /** @description Teks bantu di menu chatbot. */
+            description?: string | null;
+            /** @description Urutan tampil di menu; kecil lebih dulu. */
+            sort_order: number;
+            /** @description false = tersembunyi dari menu chatbot dan pilihan isian baru. */
+            is_active: boolean;
+            document_count: number;
+            account_count: number;
+        };
+        AdminUnitCreate: {
+            /** @description Spasi berlebih dirapikan; tidak boleh memuat `/`. */
+            name: string;
+            description?: string | null;
+            /** @description Kosong = diletakkan paling akhir. */
+            sort_order?: number | null;
+        };
+        /** @description Hanya field yang dikirim yang diubah. Field tak dikenal ditolak. */
+        AdminUnitUpdate: {
+            name?: string;
+            description?: string | null;
+            sort_order?: number;
+            is_active?: boolean;
+        };
+        EmbedKeyInfo: {
+            /** @description Menjadi `frame-ancestors` halaman `/embed`. Kosong = situs mana pun. */
+            allowed_origins: string[];
+        };
+        /** @description Satu kunci sematan beserta pemakaiannya. */
+        EmbedKey: {
+            /** @description `emb_` + 24 karakter. Bukan rahasia: tertulis di kode sumber situs penyemat. */
+            key: string;
+            /** @description Nama situs */
+            name: string;
+            /** @description Situs yang boleh memuat panel. Kosong = situs mana pun. */
+            allowed_origins: string[];
+            is_active: boolean;
+            created_by?: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Pertanyaan mahasiswa dari situs ini, 30 hari terakhir. */
+            questions_30d: number;
+            /**
+             * Format: date-time
+             * @description Pertanyaan terakhir dari situs ini; null = belum pernah dipakai.
+             */
+            last_used_at?: string | null;
+            /** @description Baris `<script>` siap tempel; null bila `PORTAL_URL` API belum diisi. */
+            embed_code?: string | null;
+        };
+        EmbedKeyCreate: {
+            name: string;
+            /**
+             * @description Alamat situs lengkap tanpa path, mis. `https://pmb.instiki.ac.id`.
+             *     Wildcard subdomain `https://*.instiki.ac.id` diterima. Garis miring
+             *     akhir, huruf besar, dan port bawaan dirapikan; duplikat dibuang.
+             *     Kosong = situs mana pun.
+             */
+            allowed_origins?: string[];
+        };
+        /** @description Hanya field yang dikirim yang diubah. Field tak dikenal ditolak. */
+        EmbedKeyUpdate: {
+            name?: string;
+            allowed_origins?: string[];
+            is_active?: boolean;
         };
         PasswordChange: {
-            password_lama: string;
+            current_password: string;
             /** @description Maksimal 72 byte (batas bcrypt). */
-            password_baru: string;
+            new_password: string;
         };
         Error: {
             /**
@@ -1559,7 +1971,12 @@ export interface components {
                 "application/json": components["schemas"]["HTTPValidationError"];
             };
         };
-        /** @description Melebihi batas laju (FR-9) */
+        /**
+         * @description Melebihi batas laju (FR-9): per IP, per `X-Session-Id`, atau per kunci
+         *     sematan -- mana pun yang lebih dulu penuh (`RATE_LIMIT_*` di `.env`).
+         *     Permintaan yang ditolak tidak ikut menghabiskan jatah. Menilai jawaban
+         *     (`/api/feedback`) punya jatah sendiri, terpisah dari bertanya.
+         */
         RateLimited: {
             headers: {
                 /** @description Detik sampai boleh mencoba lagi. */
@@ -1576,17 +1993,18 @@ export interface components {
             };
         };
         /**
-         * @description Layanan chat dimatikan operator (FR-9). Frontend menampilkan `detail`
-         *     apa adanya -- kalimatnya sudah memuat kontak manusia sebagai jalan keluar.
+         * @description Layanan chat dimatikan operator (FR-9), atau otomatis karena pertanyaan
+         *     hari ini melewati `CHAT_DAILY_LIMIT`. Frontend menampilkan `detail` apa
+         *     adanya -- kalimatnya sudah memuat kontak manusia sebagai jalan keluar.
          */
-        KillSwitchAktif: {
+        KillSwitchEngaged: {
             headers: {
                 [name: string]: unknown;
             };
             content: {
                 /**
                  * @example {
-                 *       "detail": "Layanan chat sedang dinonaktifkan sementara. Silakan hubungi Biro Administrasi Akademik pada jam kerja."
+                 *       "detail": "Layanan chat sedang dinonaktifkan sementara. Silakan hubungi Front Office INSTIKI: Telepon (0361) 256995 / WhatsApp 0813-3896-9832."
                  *     }
                  */
                 "application/json": components["schemas"]["Error"];
@@ -1597,7 +2015,7 @@ export interface components {
          *     atau dihapus; atau kata sandi sudah diganti sejak token terbit. Frontend
          *     menghapus sesi dan kembali ke halaman login.
          */
-        TidakBerwenang: {
+        Unauthorized: {
             headers: {
                 [name: string]: unknown;
             };
@@ -1609,7 +2027,7 @@ export interface components {
          * @description Level akun di bawah `x-min-role` operasi ini, atau staf/dosen menyentuh
          *     dokumen unit lain. Sesi tetap berlaku; `detail` siap tampil.
          */
-        Terlarang: {
+        Forbidden: {
             headers: {
                 [name: string]: unknown;
             };
@@ -1618,11 +2036,28 @@ export interface components {
             };
         };
         /** @description Sumber daya tidak ditemukan */
-        TidakDitemukan: {
+        NotFound: {
             headers: {
                 [name: string]: unknown;
             };
             content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /**
+         * @description `X-Embed-Key` dikirim tetapi kuncinya tidak dikenal atau sudah
+         *     dinonaktifkan dari dashboard. Frontend menampilkan `detail` apa adanya.
+         */
+        InvalidEmbedKey: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "detail": "Asisten tidak tersedia di situs ini. Silakan hubungi pengelola situs, atau ajukan pertanyaan lewat portal akademik."
+                 *     }
+                 */
                 "application/json": components["schemas"]["Error"];
             };
         };
@@ -1635,8 +2070,16 @@ export interface components {
          *     sama dengan `session_id` di body.
          */
         SessionIdHeader: string;
+        /**
+         * @description Kunci situs penyemat, hanya dikirim panel `/embed` portal yang dimuat
+         *     situs lain. Tanpa header = permintaan dari portal sendiri. Kunci yang
+         *     tidak dikenal atau sudah dinonaktifkan dijawab 403.
+         */
+        EmbedKeyHeader: string;
         Limit: number;
         Offset: number;
+        /** @description Rentang waktu. 7 hari adalah batas atas karena masa simpan log. */
+        LogRange: "24h" | "7d";
     };
     requestBodies: never;
     headers: never;
@@ -1655,6 +2098,12 @@ export interface operations {
                  *     sama dengan `session_id` di body.
                  */
                 "X-Session-Id"?: components["parameters"]["SessionIdHeader"];
+                /**
+                 * @description Kunci situs penyemat, hanya dikirim panel `/embed` portal yang dimuat
+                 *     situs lain. Tanpa header = permintaan dari portal sendiri. Kunci yang
+                 *     tidak dikenal atau sudah dinonaktifkan dijawab 403.
+                 */
+                "X-Embed-Key"?: components["parameters"]["EmbedKeyHeader"];
             };
             path?: never;
             cookie?: never;
@@ -1677,9 +2126,10 @@ export interface operations {
                     "application/json": components["schemas"]["ChatResponse"];
                 };
             };
+            403: components["responses"]["InvalidEmbedKey"];
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
-            503: components["responses"]["KillSwitchAktif"];
+            503: components["responses"]["KillSwitchEngaged"];
         };
     };
     chat_stream: {
@@ -1693,6 +2143,12 @@ export interface operations {
                  *     sama dengan `session_id` di body.
                  */
                 "X-Session-Id"?: components["parameters"]["SessionIdHeader"];
+                /**
+                 * @description Kunci situs penyemat, hanya dikirim panel `/embed` portal yang dimuat
+                 *     situs lain. Tanpa header = permintaan dari portal sendiri. Kunci yang
+                 *     tidak dikenal atau sudah dinonaktifkan dijawab 403.
+                 */
+                "X-Embed-Key"?: components["parameters"]["EmbedKeyHeader"];
             };
             path?: never;
             cookie?: never;
@@ -1726,7 +2182,7 @@ export interface operations {
                      *     data: {"text": " 1-7 Agustus 2025"}
                      *
                      *     event: message
-                     *     data: {"kind": "answer", "text": "Pengisian KRS dibuka 1-7 Agustus 2025 [Panduan Akademik 2025, hal. 12].", "citations": [{"judul": "Panduan Akademik 2025", "halaman": 12, "document_id": "3f1a...", "file_path": "storage/documents/3f1a....pdf"}], "contacts": [], "escalated": false, "top_score": 0.82}
+                     *     data: {"kind": "answer", "text": "Pengisian KRS dibuka 1-7 Agustus 2025 [Panduan Akademik 2025, hal. 12].", "citations": [{"title": "Panduan Akademik 2025", "page": 12, "document_id": "3f1a...", "file_path": "storage/documents/3f1a....pdf"}], "contacts": [], "escalated": false, "top_score": 0.82}
                      *
                      *     event: done
                      *     data: {}
@@ -1734,9 +2190,10 @@ export interface operations {
                     "text/event-stream": string;
                 };
             };
+            403: components["responses"]["InvalidEmbedKey"];
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
-            503: components["responses"]["KillSwitchAktif"];
+            503: components["responses"]["KillSwitchEngaged"];
         };
     };
     submit_feedback: {
@@ -1750,6 +2207,12 @@ export interface operations {
                  *     sama dengan `session_id` di body.
                  */
                 "X-Session-Id"?: components["parameters"]["SessionIdHeader"];
+                /**
+                 * @description Kunci situs penyemat, hanya dikirim panel `/embed` portal yang dimuat
+                 *     situs lain. Tanpa header = permintaan dari portal sendiri. Kunci yang
+                 *     tidak dikenal atau sudah dinonaktifkan dijawab 403.
+                 */
+                "X-Embed-Key"?: components["parameters"]["EmbedKeyHeader"];
             };
             path?: never;
             cookie?: never;
@@ -1767,7 +2230,8 @@ export interface operations {
                 };
                 content?: never;
             };
-            404: components["responses"]["TidakDitemukan"];
+            403: components["responses"]["InvalidEmbedKey"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
         };
@@ -1790,16 +2254,16 @@ export interface operations {
                     /**
                      * @example [
                      *       {
-                     *         "teks": "Kapan pengisian KRS dibuka?"
+                     *         "text": "Kapan pengisian KRS dibuka?"
                      *       },
                      *       {
-                     *         "teks": "Bagaimana cara mengajukan cuti kuliah?"
+                     *         "text": "Bagaimana cara mengajukan cuti kuliah?"
                      *       },
                      *       {
-                     *         "teks": "Apa saja syarat wisuda?"
+                     *         "text": "Apa saja syarat wisuda?"
                      *       },
                      *       {
-                     *         "teks": "Bagaimana cara minta surat keterangan aktif kuliah?"
+                     *         "text": "Bagaimana cara minta surat keterangan aktif kuliah?"
                      *       }
                      *     ]
                      */
@@ -1826,16 +2290,16 @@ export interface operations {
                     /**
                      * @example [
                      *       {
-                     *         "nama": "BAAK",
-                     *         "deskripsi": null
+                     *         "name": "BAAK",
+                     *         "description": null
                      *       },
                      *       {
-                     *         "nama": "FO",
-                     *         "deskripsi": "Front Office"
+                     *         "name": "FO",
+                     *         "description": "Front Office"
                      *       },
                      *       {
-                     *         "nama": "Keuangan",
-                     *         "deskripsi": null
+                     *         "name": "Keuangan",
+                     *         "description": null
                      *       }
                      *     ]
                      */
@@ -1848,7 +2312,7 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description `nama` dari `GET /api/units`, tanpa peduli huruf besar. Kosong =
+                 * @description `name` dari `GET /api/units`, tanpa peduli huruf besar. Kosong =
                  *     semua unit. Nama yang tidak terdaftar dijawab 422.
                  */
                 unit?: string | null;
@@ -1869,10 +2333,10 @@ export interface operations {
                     /**
                      * @example [
                      *       {
-                     *         "pertanyaan": "Bagaimana cara membayar UKT lewat virtual account?"
+                     *         "question": "Bagaimana cara membayar UKT lewat virtual account?"
                      *       },
                      *       {
-                     *         "pertanyaan": "Kapan batas akhir pembayaran UKT semester ganjil?"
+                     *         "question": "Kapan batas akhir pembayaran UKT semester ganjil?"
                      *       }
                      *     ]
                      */
@@ -1880,6 +2344,46 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+        };
+    };
+    get_embed_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description `emb_` + 24 karakter alfanumerik, dari atribut `data-key` di `embed.js`. */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Kunci aktif */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "allowed_origins": [
+                     *         "https://pmb.instiki.ac.id",
+                     *         "https://www.instiki.ac.id"
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["EmbedKeyInfo"];
+                };
+            };
+            /** @description Kunci tidak dikenal, salah bentuk, atau sudah dinonaktifkan */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     get_document_file: {
@@ -1913,7 +2417,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            404: components["responses"]["TidakDitemukan"];
+            404: components["responses"]["NotFound"];
         };
     };
     health: {
@@ -2012,8 +2516,8 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentPage"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     upload_document: {
@@ -2038,8 +2542,8 @@ export interface operations {
                     "application/json": components["schemas"]["IngestionResult"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             /** @description Berkas melebihi `MAX_UPLOAD_MB` */
             413: {
                 headers: {
@@ -2093,9 +2597,9 @@ export interface operations {
                     "application/json": components["schemas"]["Document"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
-            404: components["responses"]["TidakDitemukan"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     delete_document: {
@@ -2116,9 +2620,9 @@ export interface operations {
                 };
                 content?: never;
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
-            404: components["responses"]["TidakDitemukan"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     update_document: {
@@ -2145,9 +2649,9 @@ export interface operations {
                     "application/json": components["schemas"]["Document"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
-            404: components["responses"]["TidakDitemukan"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -2174,9 +2678,9 @@ export interface operations {
                     "application/json": components["schemas"]["Chunk"][];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
-            404: components["responses"]["TidakDitemukan"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     list_faq: {
@@ -2201,8 +2705,8 @@ export interface operations {
                     "application/json": components["schemas"]["FaqPage"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     create_faq: {
@@ -2227,8 +2731,8 @@ export interface operations {
                     "application/json": components["schemas"]["FaqEntry"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
             /**
              * @description Layanan AI untuk menghitung embedding gagal. `detail` berisi kalimat
@@ -2262,9 +2766,9 @@ export interface operations {
                 };
                 content?: never;
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
-            404: components["responses"]["TidakDitemukan"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     update_faq: {
@@ -2291,9 +2795,9 @@ export interface operations {
                     "application/json": components["schemas"]["FaqEntry"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
-            404: components["responses"]["TidakDitemukan"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
             /** @description Layanan AI gagal saat mengindeks ulang; entri tidak berubah. */
             502: {
@@ -2311,7 +2815,7 @@ export interface operations {
             query?: {
                 /** @description Kosongkan untuk menampilkan keduanya. */
                 resolved?: boolean;
-                sejak?: string;
+                since?: string;
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -2334,10 +2838,10 @@ export interface operations {
                      *           "0b6f2c1e-3a4d-4e5f-9a8b-7c6d5e4f3a2b",
                      *           "1c7a3d2f-4b5e-4f60-8b9c-8d7e6f5a4b3c"
                      *         ],
-                     *         "contoh_pertanyaan": "Bagaimana cara mengurus surat keterangan lulus?",
-                     *         "jumlah": 12,
-                     *         "top_score_rata2": 0.21,
-                     *         "terakhir_ditanyakan": "2026-09-09T14:22:11Z",
+                     *         "sample_question": "Bagaimana cara mengurus surat keterangan lulus?",
+                     *         "count": 12,
+                     *         "avg_top_score": 0.21,
+                     *         "last_asked_at": "2026-09-09T14:22:11Z",
                      *         "resolved": false
                      *       }
                      *     ]
@@ -2345,8 +2849,8 @@ export interface operations {
                     "application/json": components["schemas"]["UnansweredGroup"][];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     resolve_unanswered: {
@@ -2371,9 +2875,9 @@ export interface operations {
                 };
                 content?: never;
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
-            404: components["responses"]["TidakDitemukan"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     list_feedback: {
@@ -2381,7 +2885,7 @@ export interface operations {
             query?: {
                 /** @description Kosongkan untuk menampilkan keduanya. */
                 helpful?: boolean;
-                sejak?: string;
+                since?: string;
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -2404,24 +2908,24 @@ export interface operations {
                      *           "id": "7d1e4b2a-9c3f-4e58-b0a7-1f2e3d4c5b6a",
                      *           "message_id": "9c3e1a44-6b2d-4f51-8a70-2d9b5c1e7f03",
                      *           "helpful": false,
-                     *           "catatan": "Jawabannya tidak menyebut biaya cetaknya",
+                     *           "comment": "Jawabannya tidak menyebut biaya cetaknya",
                      *           "created_at": "2026-09-09T14:25:03Z",
-                     *           "pertanyaan": "Berapa biaya legalisir ijazah?",
-                     *           "jawaban": "Legalisir ijazah diurus di Biro Administrasi Akademik [Panduan Akademik 2025, hal. 12].",
+                     *           "question": "Berapa biaya legalisir ijazah?",
+                     *           "answer": "Legalisir ijazah diurus di Biro Administrasi Akademik [Panduan Akademik 2025, hal. 12].",
                      *           "kind": "answer",
                      *           "top_score": 0.62
                      *         }
                      *       ],
                      *       "total": 18,
-                     *       "jumlah_positif": 124,
-                     *       "jumlah_negatif": 18
+                     *       "positive_count": 124,
+                     *       "negative_count": 18
                      *     }
                      */
                     "application/json": components["schemas"]["FeedbackPage"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     admin_test_query: {
@@ -2446,16 +2950,16 @@ export interface operations {
                     "application/json": components["schemas"]["TestQueryResponse"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
     admin_stats: {
         parameters: {
             query?: {
-                sejak?: string;
-                sampai?: string;
+                since?: string;
+                until?: string;
             };
             header?: never;
             path?: never;
@@ -2472,8 +2976,8 @@ export interface operations {
                     "application/json": components["schemas"]["Stats"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             /** @description Rentang tanggal tidak sah (terbalik atau terlalu panjang) */
             422: {
                 headers: {
@@ -2488,8 +2992,8 @@ export interface operations {
     admin_costs: {
         parameters: {
             query?: {
-                sejak?: string;
-                sampai?: string;
+                since?: string;
+                until?: string;
             };
             header?: never;
             path?: never;
@@ -2506,9 +3010,150 @@ export interface operations {
                     "application/json": components["schemas"]["Costs"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             /** @description Rentang tanggal tidak sah */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    log_summary: {
+        parameters: {
+            query?: {
+                /** @description Rentang waktu. 7 hari adalah batas atas karena masa simpan log. */
+                range?: components["parameters"]["LogRange"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ringkasan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LogSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Parameter tidak sah */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    list_turns: {
+        parameters: {
+            query?: {
+                /** @description Rentang waktu. 7 hari adalah batas atas karena masa simpan log. */
+                range?: components["parameters"]["LogRange"];
+                outcome?: string;
+                status?: "ok" | "error" | "dibatalkan";
+                unit?: string;
+                last_node?: string;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Satu halaman giliran */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Parameter tidak sah */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    get_turn: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                turn_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Detail giliran */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnDetail"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    list_app_logs: {
+        parameters: {
+            query?: {
+                /** @description Rentang waktu. 7 hari adalah batas atas karena masa simpan log. */
+                range?: components["parameters"]["LogRange"];
+                /** @description Level minimum. */
+                level?: "DEBUG" | "INFO" | "WARNING" | "ERROR" | "CRITICAL";
+                /** @description Nama logger; turunannya ikut, mis. `app.rag`. */
+                logger?: string;
+                /** @description Cari di isi pesan. */
+                q?: string;
+                limit?: components["parameters"]["Limit"];
+                offset?: components["parameters"]["Offset"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Satu halaman log */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppLogPage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Parameter tidak sah */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -2537,8 +3182,8 @@ export interface operations {
                     "application/json": components["schemas"]["KillSwitchState"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     set_kill_switch: {
@@ -2563,8 +3208,8 @@ export interface operations {
                     "application/json": components["schemas"]["KillSwitchState"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -2586,8 +3231,8 @@ export interface operations {
                     "application/json": components["schemas"]["RuntimeConfig"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     reset_runtime_config: {
@@ -2608,8 +3253,8 @@ export interface operations {
                     "application/json": components["schemas"]["RuntimeConfig"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     update_runtime_config: {
@@ -2634,8 +3279,8 @@ export interface operations {
                     "application/json": components["schemas"]["RuntimeConfig"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             /** @description Nilai di luar batas, atau kombinasinya tidak sah */
             422: {
                 headers: {
@@ -2665,7 +3310,7 @@ export interface operations {
                     "application/json": components["schemas"]["AdminUser"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
+            401: components["responses"]["Unauthorized"];
         };
     };
     change_my_password: {
@@ -2699,7 +3344,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
+            401: components["responses"]["Unauthorized"];
             422: components["responses"]["ValidationError"];
             429: components["responses"]["RateLimited"];
         };
@@ -2722,8 +3367,8 @@ export interface operations {
                     "application/json": components["schemas"]["AdminUser"][];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     create_user: {
@@ -2748,8 +3393,8 @@ export interface operations {
                     "application/json": components["schemas"]["AdminUserCreated"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             /** @description Email sudah dipakai, atau level staf tanpa unit */
             409: {
                 headers: {
@@ -2780,9 +3425,9 @@ export interface operations {
                 };
                 content?: never;
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
-            404: components["responses"]["TidakDitemukan"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             /** @description Menghapus diri sendiri, atau superadmin aktif terakhir */
             409: {
                 headers: {
@@ -2818,9 +3463,9 @@ export interface operations {
                     "application/json": components["schemas"]["AdminUser"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
-            404: components["responses"]["TidakDitemukan"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             /** @description Melanggar aturan akun (lihat deskripsi) */
             409: {
                 headers: {
@@ -2853,9 +3498,9 @@ export interface operations {
                     "application/json": components["schemas"]["TemporaryPassword"];
                 };
             };
-            401: components["responses"]["TidakBerwenang"];
-            403: components["responses"]["Terlarang"];
-            404: components["responses"]["TidakDitemukan"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
             /** @description Mengatur ulang akun sendiri */
             409: {
                 headers: {
@@ -2865,6 +3510,206 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    list_admin_units: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Semua unit */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUnit"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    create_unit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUnitCreate"];
+            };
+        };
+        responses: {
+            /** @description Unit dibuat */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUnit"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Nama sama dengan unit lain (huruf besar-kecil dan spasi tidak dibedakan) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    update_unit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Ejaan resmi, persis seperti di `GET /api/admin/units`. */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminUnitUpdate"];
+            };
+        };
+        responses: {
+            /** @description Tersimpan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUnit"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Nama baru sama dengan unit lain */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    list_embed_keys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Semua kunci */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedKey"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    create_embed_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmbedKeyCreate"];
+            };
+        };
+        responses: {
+            /** @description Kunci dibuat */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedKey"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    delete_embed_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Terhapus */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    update_embed_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmbedKeyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Tersimpan */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmbedKey"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
 }

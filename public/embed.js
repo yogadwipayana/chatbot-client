@@ -1,15 +1,17 @@
 /*
  * Asisten Administrasi -- skrip sematan untuk situs lain.
  *
- *   <script src="https://<domain-portal>/embed.js" async></script>
+ *   <script src="https://<domain-portal>/embed.js" data-key="emb_..." async></script>
  *
  * Satu baris itu memasang tombol "Tanya Asisten" di pojok kanan bawah. Panelnya
  * adalah halaman /embed milik portal yang dimuat dalam iframe, jadi situs
  * penyemat tidak menyalin desain dan tidak memanggil API sendiri: permintaan ke
  * API berangkat dari asal portal, yang sudah terdaftar di CORS_ORIGINS API.
  *
- * Bila EMBED_ALLOWED_ORIGINS portal diisi, situs penyemat harus ada di sana
- * (next.config.ts); kalau tidak, peramban menolak menampilkan iframe-nya.
+ * data-key adalah kunci sematan situs ini, dibuat di halaman Sematan dashboard
+ * admin. Kunci bukan rahasia; yang membatasinya daftar situs milik kunci itu,
+ * yang diperiksa portal (src/proxy.ts) setiap kali panel dibuka. Situs di luar
+ * daftar itu tetap mendapat tombolnya, tetapi peramban menolak panelnya.
  *
  * Disajikan apa adanya dari public/, tanpa build step. Berkas ini berjalan di
  * halaman milik orang lain: jangan sentuh apa pun di luar elemennya sendiri.
@@ -20,6 +22,18 @@
   const script = document.currentScript
   // Terpasang dua kali (mis. lewat template dan tag manager): cukup satu tombol.
   if (!script || window.__asistenAdministrasi) return
+
+  const KUNCI = (script.getAttribute("data-key") || "").trim()
+  if (!KUNCI) {
+    // Tanpa kunci panelnya pasti ditolak portal; tombol yang membuka panel
+    // kosong lebih membingungkan daripada tidak ada tombol sama sekali.
+    console.warn(
+      "[Asisten Administrasi] Atribut data-key belum diisi pada tag <script> embed.js. " +
+        "Minta kode sematan lengkap dari pengelola portal (dashboard admin, menu Sematan)."
+    )
+    return
+  }
+  // Setelah kunci diperiksa: tag tanpa kunci tidak boleh menghalangi tag yang benar.
   window.__asistenAdministrasi = true
 
   const ASAL = new URL(script.src).origin
@@ -177,7 +191,7 @@
     if (next && !iframe) {
       iframe = document.createElement("iframe")
       iframe.title = "Asisten Administrasi"
-      iframe.src = `${ASAL}/embed?mode=widget`
+      iframe.src = `${ASAL}/embed?mode=widget&key=${encodeURIComponent(KUNCI)}`
       frame.append(iframe)
     }
     frame.hidden = !next

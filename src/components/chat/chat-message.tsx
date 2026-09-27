@@ -13,6 +13,7 @@ import {
 } from "react-icons/fa"
 
 import { citationUrl, type Citation, type Contact } from "@/lib/api/chat"
+import { potongKontak } from "@/lib/kontak"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
@@ -121,7 +122,7 @@ export function AssistantMessage({
           {refusal ? <FaExclamationTriangle aria-hidden /> : <FaHandHoldingHeart aria-hidden />}
           {refusal ? "Tidak ditemukan di dokumen resmi" : "Ada yang siap membantu"}
         </span>
-        <RichText text={response.text} />
+        <RichText text={response.text} tautKontak />
       </BotBubble>
     )
   }
@@ -153,13 +154,43 @@ export function AssistantMessage({
  * Model kadang menulis penekanan Markdown (`**3 Agustus 2026**`). Hanya tebal
  * yang diterjemahkan; sisanya -- termasuk penanda sitasi `[Judul, hal. 12]` --
  * ditampilkan apa adanya.
+ *
+ * `tautKontak`: nomor telepon dijadikan tautan. Hanya untuk teks yang disusun
+ * server dari daftar kontak (penolakan, dukungan), bukan jawaban LLM.
  */
-function RichText({ text }: { text: string }) {
+function RichText({ text, tautKontak = false }: { text: string; tautKontak?: boolean }) {
   const bagian = text.split(/\*\*([\s\S]+?)\*\*/g)
   return (
     <>
       {bagian.map((teks, index) =>
-        index % 2 === 1 ? <strong key={index}>{teks}</strong> : teks
+        index % 2 === 1 ? (
+          <strong key={index}>{teks}</strong>
+        ) : tautKontak ? (
+          <TeksKontak key={index} text={teks} />
+        ) : (
+          teks
+        )
+      )}
+    </>
+  )
+}
+
+/** Teks kontak dengan nomor telepon/WhatsApp yang dapat diketuk (`potongKontak`). */
+function TeksKontak({ text }: { text: string }) {
+  return (
+    <>
+      {potongKontak(text).map((bagian, index) =>
+        bagian.href ? (
+          <a
+            key={index}
+            href={bagian.href}
+            {...(bagian.eksternal && { target: "_blank", rel: "noopener noreferrer" })}
+          >
+            {bagian.teks}
+          </a>
+        ) : (
+          <Fragment key={index}>{bagian.teks}</Fragment>
+        )
       )}
     </>
   )
@@ -190,10 +221,10 @@ function Citations({ citations }: { citations: Citation[] }) {
 
 type CitationGroup = {
   key: string
-  judul: string
-  jenis: Citation["jenis"]
+  title: string
+  type: Citation["type"]
   /** Halaman unik dokumen ini, urut menaik. */
-  halaman: Citation[]
+  pages: Citation[]
 }
 
 /**
@@ -209,19 +240,19 @@ function kelompokkan(citations: Citation[]): CitationGroup[] {
   for (const citation of citations) {
     // Entri tanya jawab tak berberkas masih punya `document_id`; judul hanya
     // cadangan bila suatu saat ada sumber tanpa id.
-    const key = citation.document_id || citation.judul
+    const key = citation.document_id || citation.title
     let kelompok = indeks.get(key)
     if (!kelompok) {
-      kelompok = { key, judul: citation.judul, jenis: citation.jenis, halaman: [] }
+      kelompok = { key, title: citation.title, type: citation.type, pages: [] }
       indeks.set(key, kelompok)
       urut.push(kelompok)
     }
-    if (!kelompok.halaman.some((h) => h.halaman === citation.halaman)) {
-      kelompok.halaman.push(citation)
+    if (!kelompok.pages.some((h) => h.page === citation.page)) {
+      kelompok.pages.push(citation)
     }
   }
 
-  for (const kelompok of urut) kelompok.halaman.sort((a, b) => a.halaman - b.halaman)
+  for (const kelompok of urut) kelompok.pages.sort((a, b) => a.page - b.page)
   return urut
 }
 
@@ -232,19 +263,19 @@ function kelompokkan(citations: Citation[]): CitationGroup[] {
  * pasti buntu, dan tanpa nomor halaman yang tidak berarti apa-apa.
  */
 function CitationCard({ kelompok }: { kelompok: CitationGroup }) {
-  if (kelompok.jenis === "tanya_jawab") {
+  if (kelompok.type === "tanya_jawab") {
     return (
       <div className={cx(styles.citation, styles.citationStatic)}>
         <FaRegCommentDots className={styles.qaIcon} aria-hidden />
-        <span className={styles.citationTitle}>{kelompok.judul}</span>
+        <span className={styles.citationTitle}>{kelompok.title}</span>
         <span className={styles.citationPage}>Tanya jawab resmi</span>
       </div>
     )
   }
 
   // Satu halaman: seluruh kartu tetap satu tautan, target kliknya sebesar mungkin.
-  if (kelompok.halaman.length === 1) {
-    const citation = kelompok.halaman[0]
+  if (kelompok.pages.length === 1) {
+    const citation = kelompok.pages[0]
     return (
       <a
         className={styles.citation}
@@ -253,8 +284,8 @@ function CitationCard({ kelompok }: { kelompok: CitationGroup }) {
         rel="noopener noreferrer"
       >
         <FaFilePdf className={styles.pdfIcon} aria-hidden />
-        <span className={styles.citationTitle}>{kelompok.judul}</span>
-        <span className={styles.citationPage}>hal. {citation.halaman}</span>
+        <span className={styles.citationTitle}>{kelompok.title}</span>
+        <span className={styles.citationPage}>hal. {citation.page}</span>
         <FaExternalLinkAlt className={styles.externalIcon} aria-hidden />
         <span className="sr-only">(buka di tab baru)</span>
       </a>
@@ -266,20 +297,20 @@ function CitationCard({ kelompok }: { kelompok: CitationGroup }) {
   return (
     <div className={cx(styles.citation, styles.citationGrouped)}>
       <FaFilePdf className={styles.pdfIcon} aria-hidden />
-      <span className={styles.citationTitle}>{kelompok.judul}</span>
+      <span className={styles.citationTitle}>{kelompok.title}</span>
       <span className={styles.citationPages}>
         hal.{" "}
-        {kelompok.halaman.map((citation, index) => (
-          <Fragment key={citation.halaman}>
-            {pemisah(index, kelompok.halaman.length)}
+        {kelompok.pages.map((citation, index) => (
+          <Fragment key={citation.page}>
+            {pemisah(index, kelompok.pages.length)}
             <a
               className={styles.pageLink}
               href={citationUrl(citation)}
               target="_blank"
               rel="noopener noreferrer"
-              aria-label={`${kelompok.judul}, halaman ${citation.halaman} (buka di tab baru)`}
+              aria-label={`${kelompok.title}, halaman ${citation.page} (buka di tab baru)`}
             >
-              {citation.halaman}
+              {citation.page}
             </a>
           </Fragment>
         ))}
@@ -307,12 +338,12 @@ function Escalation({ contacts }: { contacts: Contact[] }) {
         {contacts.map((contact) => (
           <li key={contact.unit}>
             <strong>{contact.unit}</strong>
-            <span>{contact.jam_layanan}</span>
+            <span>{contact.service_hours}</span>
             <span>
-              {isEmail(contact.kontak) ? (
-                <a href={`mailto:${contact.kontak}`}>{contact.kontak}</a>
+              {isEmail(contact.contact) ? (
+                <a href={`mailto:${contact.contact}`}>{contact.contact}</a>
               ) : (
-                contact.kontak
+                <TeksKontak text={contact.contact} />
               )}
             </span>
           </li>
@@ -366,7 +397,7 @@ function Feedback({
 }
 
 /**
- * Kotak catatan yang menyertai 👎 (kolom `feedback.catatan`).
+ * Kotak catatan yang menyertai 👎 (kolom `feedback.comment`).
  *
  * Jempol ke bawah saja hanya memberi tahu admin bahwa ada yang salah, bukan
  * apanya: daftar umpan balik AD-4 berisi baris tanpa keterangan yang harus

@@ -35,7 +35,8 @@ export type FeedbackControls = {
 /** Server hanya memakai 3 pesan terakhir untuk penulisan ulang query (FR-4). */
 const HISTORY_LIMIT = 3
 
-export function useChat() {
+/** `embedKey`: kunci situs penyemat, dikirim bersama setiap pertanyaan dan penilaian. */
+export function useChat(embedKey?: string) {
   const [entries, setEntries] = useState<ChatEntry[]>([])
   // Topik yang sedang berlaku untuk pertanyaan yang DIKETIK; null = semua unit.
   // Sengaja tidak disimpan di localStorage: topik kemarin yang diam-diam masih
@@ -85,6 +86,7 @@ export function useChat() {
         { question, session_id: getSessionId(), history, unit: tujuan },
         {
           signal: current.signal,
+          embedKey,
           onStatus: (stage) => {
             // Status yang tiba setelah token pertama tidak boleh menghapus teks
             // yang sudah terbaca mahasiswa.
@@ -130,7 +132,7 @@ export function useChat() {
     setRatings((prev) => ({ ...prev, [messageId]: helpful }))
     setNotes((prev) => (helpful ? tanpa(prev, messageId) : { ...prev, [messageId]: "open" }))
     try {
-      await sendFeedback({ message_id: messageId, helpful }, getSessionId())
+      await sendFeedback({ message_id: messageId, helpful }, getSessionId(), embedKey)
     } catch {
       setRatings((prev) => {
         const next = { ...prev }
@@ -143,7 +145,7 @@ export function useChat() {
   }
 
   /**
-   * Kirim catatan yang menyertai 👎 (kolom `feedback.catatan`).
+   * Kirim catatan yang menyertai 👎 (kolom `feedback.comment`).
    *
    * Dikirim sebagai umpan balik yang sama sekali lagi, bukan tambahan: server
    * mengganti baris lama untuk `message_id` yang sama, sehingga satu jawaban
@@ -159,8 +161,9 @@ export function useChat() {
     setNotes((prev) => ({ ...prev, [messageId]: "sending" }))
     try {
       await sendFeedback(
-        { message_id: messageId, helpful: false, catatan: isi },
-        getSessionId()
+        { message_id: messageId, helpful: false, comment: isi },
+        getSessionId(),
+        embedKey
       )
       setNotes((prev) => ({ ...prev, [messageId]: "sent" }))
     } catch {
@@ -223,9 +226,9 @@ function toHistory(entries: ChatEntry[]): Turn[] {
   for (const entry of entries) {
     // Klik topik tidak ikut: "Keuangan" bukan pertanyaan, dan menyertakannya
     // hanya mengacaukan penulisan ulang query (FR-4).
-    if (entry.role === "user") turns.push({ role: "user", konten: entry.text })
+    if (entry.role === "user") turns.push({ role: "user", content: entry.text })
     else if (entry.role === "assistant" && entry.state === "done" && entry.reply.complete) {
-      turns.push({ role: "assistant", konten: entry.reply.response.text })
+      turns.push({ role: "assistant", content: entry.reply.response.text })
     }
   }
   return turns.slice(-HISTORY_LIMIT)

@@ -4,30 +4,29 @@ Asisten administrasi bisa dipasang di situs mana pun (situs fakultas, PMB, LMS)
 dengan **satu baris**:
 
 ```html
-<script src="https://<domain-portal>/embed.js" async></script>
+<script src="https://<domain-portal>/embed.js" data-key="emb_..." async></script>
 ```
 
 `<domain-portal>` adalah domain tempat portal ini (`client/`) di-deploy (mis.
-`sads.instiki.ac.id`), **bukan** domain API. Situs penyemat tidak menyalin
-desain, tidak memanggil API, dan tidak butuh kunci apa pun.
+`sads.instiki.ac.id`), **bukan** domain API. `data-key` adalah **kunci sematan**
+situs itu, dibuat superadmin di dashboard admin, menu **Sematan**. Dashboard
+menampilkan baris di atas lengkap dan siap tempel. Situs penyemat tidak menyalin
+desain dan tidak memanggil API sendiri.
 
 Contoh yang bisa langsung dijalankan: [`index.html`](index.html) — lihat
 [Menjalankan contoh ini](#menjalankan-contoh-ini).
 
-> Seluruh kodenya ada di repo ini; `api/` tidak berubah sama sekali. Alasannya
-> di [Cara kerja](#cara-kerja). Path di dokumen ini relatif terhadap akar
-> `client/`.
+> Path di dokumen ini relatif terhadap akar `client/`.
 
 ---
 
 ## Memasang
 
-1. Tempel baris di atas tepat sebelum `</body>` — di setiap halaman yang ingin
-   menampilkan asisten, atau sekali di template/layout situs.
-2. Bila portal mengisi `EMBED_ALLOWED_ORIGINS`, minta pengelola portal
-   menambahkan domain situs Anda (lihat [Konfigurasi di portal](#konfigurasi-di-portal)).
-   Situs yang tidak terdaftar tetap mendapat tombolnya, tetapi panelnya ditolak
-   peramban.
+1. Superadmin membuat kunci di dashboard admin → **Sematan** → **Buat kunci**:
+   nama situs, dan (disarankan) domain situs yang boleh memakainya.
+2. Salin **kode sematan** yang ditampilkan, lalu tempel tepat sebelum
+   `</body>` — di setiap halaman yang ingin menampilkan asisten, atau sekali di
+   template/layout situs.
 3. Bila situs Anda punya Content Security Policy sendiri, izinkan domain portal
    di `script-src` dan `frame-src`:
 
@@ -53,6 +52,7 @@ Yang perlu diketahui pemilik situs:
   iframe: gaya situs penyemat tidak bisa merusaknya, dan sebaliknya.
 - **Terpasang dua kali tetap satu tombol**, mis. lewat template dan tag manager
   sekaligus.
+- **Tanpa `data-key`, tombol tidak dipasang** dan konsol menulis peringatan.
 - **Selalu di atas.** Tombol dan panel memakai `z-index: 2147483000`. Widget
   lain di pojok kanan bawah (chat CS, tombol "kembali ke atas") akan tertutup;
   pindahkan widget tersebut.
@@ -64,12 +64,58 @@ Yang perlu diketahui pemilik situs:
 | Kebutuhan | Pasang |
 |---|---|
 | Tautan ke halaman chat penuh | `<a href="https://<domain-portal>/embed">Tanya Asisten</a>` |
-| Panel tertanam di badan halaman | `<iframe src="https://<domain-portal>/embed" title="Asisten Administrasi" style="width:100%;height:600px;border:0"></iframe>` |
+| Panel tertanam di badan halaman | `<iframe src="https://<domain-portal>/embed?key=emb_..." title="Asisten Administrasi" style="width:100%;height:600px;border:0"></iframe>` |
 
 Keduanya membuka `/embed` tanpa `?mode=widget`, jadi panel tampil tanpa tombol
 tutup — tidak ada yang bisa ditutup. Panel mengisi tinggi iframe dan melebar
-sampai 760 px. Iframe langsung tetap tunduk pada `EMBED_ALLOWED_ORIGINS`;
-tautan tidak, karena dibuka sebagai halaman biasa.
+sampai 760 px. Iframe tetap butuh `?key=` dan tunduk pada daftar domain kunci
+itu; tautan biasa tidak butuh kunci, karena dibuka sebagai halaman penuh —
+tetapi tanpa kunci, halaman itu tidak dapat dibingkai situs lain.
+
+---
+
+## Kunci sematan
+
+Satu situs = satu kunci (`emb_` + 24 karakter). Dikelola superadmin di
+dashboard admin, menu **Sematan** (`/sematan`):
+
+| Aksi | Akibat |
+|---|---|
+| Buat kunci | Langsung aktif. Kode sematan siap tempel ditampilkan dan dapat disalin lagi kapan saja. |
+| Ubah daftar domain | Berlaku saat panel dibuka berikutnya. Situs penyemat tidak perlu mengganti kodenya. |
+| Nonaktifkan | Panel baru menampilkan "Asisten tidak tersedia di situs ini"; panel yang sedang terbuka ditolak pada pertanyaan berikutnya. Dapat diaktifkan lagi. |
+| Hapus | Permanen. Situs yang masih memasangnya harus diberi kunci baru. Percakapan dari situs itu tetap tersimpan. |
+
+**Kunci bukan rahasia.** Ia tertulis di kode sumber situs penyemat, jadi siapa
+pun bisa menyalinnya. Yang membatasi pemakaiannya adalah **daftar domain**:
+peramban sendiri yang menolak menampilkan panel di situs yang tidak terdaftar,
+sehingga kunci salinan tidak berguna di sana. Daftar kosong berarti situs mana
+pun — dashboard menandainya **Semua situs** supaya tidak terlupa. **Isi daftar
+domain di produksi**: setiap pertanyaan dari situs penyemat memakai kuota model
+AI kampus.
+
+**Kunci bukan pengaman API.** Daftar domain, `frame-ancestors`, dan CORS
+semuanya ditegakkan peramban: ketiganya menahan situs lain yang memasang
+panel, tetapi tidak menahan orang yang memanggil `POST /api/chat/stream`
+langsung lewat Postman atau skrip — dengan kunci siapa pun, atau tanpa kunci
+sama sekali. API chat memang publik tanpa login (PRD v1). Yang menahan
+pemanggilan langsung ada di API sendiri: batas laju per IP, per sesi, dan per
+situs (`RATE_LIMIT_*`), batas pertanyaan harian yang menyalakan kill switch
+(`CHAT_DAILY_LIMIT`, dapat diubah dari halaman Konfigurasi), dan batas panjang
+pertanyaan (500 karakter).
+
+Aturan penulisan domain (diperiksa API, dirapikan otomatis):
+
+- Asal lengkap — skema, domain, dan port bila bukan 80/443 — **tanpa path**:
+  `https://pmb.instiki.ac.id`, bukan `https://pmb.instiki.ac.id/daftar`.
+- Garis miring akhir, huruf besar, dan port bawaan (`:443`) dibuang; duplikat
+  dibuang.
+- Wildcard subdomain ala CSP diterima: `https://*.instiki.ac.id` mencakup semua
+  subdomain, tetapi **tidak** `https://instiki.ac.id` itu sendiri.
+- Paling banyak 20 domain per kunci.
+
+Dashboard juga menunjukkan jumlah pertanyaan 30 hari terakhir dan waktu
+pertanyaan terakhir per kunci, dari kolom `conversations.embed_key`.
 
 ---
 
@@ -80,26 +126,46 @@ sequenceDiagram
     participant S as Situs penyemat
     participant E as embed.js (di situs penyemat)
     participant P as Portal /embed (iframe)
+    participant X as Portal proxy.ts (server)
     participant A as API
 
-    S->>E: memuat …/embed.js
+    S->>E: memuat …/embed.js (data-key)
     E->>S: pasang tombol (Shadow DOM)
     Note over E: pengunjung menekan tombol
-    E->>P: buat iframe …/embed?mode=widget
-    P->>A: POST /api/chat/stream (Origin: domain portal)
+    E->>X: iframe …/embed?mode=widget&key=emb_…
+    X->>A: GET /api/embed/keys/emb_…
+    A-->>X: allowed_origins (atau 404)
+    X-->>P: halaman + CSP frame-ancestors
+    P->>A: POST /api/chat/stream + X-Embed-Key (Origin: domain portal)
     A-->>P: SSE: status, token, message, done
     P-->>E: postMessage asisten:tutup (tombol ✕ / Escape)
     E-->>P: postMessage asisten:buka / asisten:tutup (tombol peluncur)
 ```
 
+- **Kunci diperiksa di server portal, setiap kali panel dimuat.**
+  `src/proxy.ts` bertanya ke `GET /api/embed/keys/{key}` lalu memasang
+  `Content-Security-Policy: frame-ancestors 'self' <domain kunci itu>` pada
+  `/embed`. Daftar kosong menjadi `frame-ancestors *`. Kunci yang tidak dikenal,
+  nonaktif, atau API yang tidak dapat dihubungi menghasilkan halaman pesan
+  "tidak tersedia" (tanpa chat) alih-alih panel kosong.
+- **Halaman portal lain tidak dapat dibingkai.** `proxy.ts` memasang
+  `frame-ancestors 'self'` pada semua halaman selain `/embed` — termasuk `/`,
+  yang juga membawa widget chat. Tanpa ini situs mana pun dapat meng-iframe `/`
+  dan memakai asisten tanpa kunci.
+- **Setiap pertanyaan membawa kuncinya** di header `X-Embed-Key`. API menolak
+  (403) kunci yang sudah dinonaktifkan, jadi pencabutan juga menghentikan panel
+  yang sedang terbuka, dan mencatat asal percakapan untuk statistik per situs.
+  Portal sendiri tidak mengirim header ini.
 - **Permintaan ke API berangkat dari iframe**, jadi `Origin`-nya domain portal,
-  bukan domain situs penyemat. `CORS_ORIGINS` di API cukup memuat domain portal
-  — yang memang sudah ada karena portal sendiri memakainya. Domain situs
-  penyemat **tidak perlu** ditambahkan ke sana.
-- **Batas laju tetap berlaku.** `session_id` disimpan di `localStorage` milik
-  iframe. Peramban modern memisahkan penyimpanan iframe per situs induk, jadi
-  pengunjung yang sama di dua situs penyemat dan di portal tercatat sebagai tiga
-  sesi. Bila `localStorage` diblokir, sesi berlaku per tab (`lib/session.ts`).
+  bukan domain situs penyemat. `CORS_ORIGINS` di API cukup memuat domain portal.
+  Domain situs penyemat **tidak perlu** ditambahkan ke sana.
+- **Batas laju berlaku per sesi, per IP, dan per situs.** Seluruh pengunjung
+  satu situs penyemat berbagi satu jatah per kunci (`RATE_LIMIT_PER_EMBED_SITE`
+  di API), supaya satu situs yang ramai tidak menghabiskan kuota milik semua.
+  `session_id` disimpan di `localStorage` milik iframe. Peramban modern
+  memisahkan penyimpanan iframe per situs induk, jadi pengunjung yang sama di
+  dua situs penyemat dan di portal tercatat sebagai tiga sesi. Bila
+  `localStorage` diblokir, sesi berlaku per tab (`lib/session.ts`).
 - **Pesan antara `embed.js` dan iframe hanya sinyal buka/tutup.** Isi
   percakapan tidak pernah keluar dari iframe.
 
@@ -124,25 +190,24 @@ sequenceDiagram
 
 ## Konfigurasi di portal
 
-| Variabel (`.env.local`) | Isi |
+| Variabel | Isi |
 |---|---|
-| `EMBED_ALLOWED_ORIGINS` | Situs yang boleh memuat `/embed` dalam iframe, dipisah koma, mis. `https://www.instiki.ac.id,https://pmb.instiki.ac.id`. Kosong = situs mana pun. |
+| `API_INTERNAL_URL` | Alamat API dari sisi **server** portal, untuk pemeriksaan kunci di `src/proxy.ts`. Dibaca saat server berjalan, bukan saat build. Kosong = `NEXT_PUBLIC_API_BASE_URL` bila berupa alamat lengkap, atau `http://localhost:8000`. |
 
-- **Dibaca saat `npm run build`**, bukan saat server berjalan — sama seperti
-  `NEXT_PUBLIC_API_BASE_URL`. Mengubahnya berarti build ulang; di server cukup
-  ubah `.env.local` lalu jalankan `start.sh`, yang sudah menjalankan build.
-- **Isi di produksi.** Setiap pertanyaan dari situs penyemat memakai kuota model
-  AI kampus, dan tanpa daftar ini situs mana pun bisa memasang asisten.
-- Tulis asal lengkap — skema, domain, dan port bila bukan 80/443 — tanpa path.
-  Garis miring di akhir dibuang otomatis. Wildcard subdomain ala CSP berlaku:
-  `https://*.instiki.ac.id` mencakup semua subdomain, tetapi **tidak**
-  `https://instiki.ac.id` itu sendiri.
-- Hasilnya satu header pada `/embed` saja; halaman portal lain tidak berubah:
+- Wajib diisi bila `NEXT_PUBLIC_API_BASE_URL` dikosongkan (portal dan API satu
+  domain di balik Caddy), atau bila alamat publik API tidak terjangkau dari
+  mesin/kontainer portal. `docker-compose.yml` mengisinya
+  `http://host.docker.internal:8000`, karena api memakai jaringan host.
+- Di API, isi `PORTAL_URL` (mis. `https://sads.instiki.ac.id`) supaya dashboard
+  menampilkan kode sematan siap tempel. Saat `ENVIRONMENT=local` bawaannya
+  `http://localhost:3001`.
+- Periksa hasilnya pada satu kunci:
 
   ```bash
-  curl -sI https://<domain-portal>/embed | grep -i content-security
-  # kosong:  Content-Security-Policy: frame-ancestors *
-  # terisi:  Content-Security-Policy: frame-ancestors 'self' https://www.instiki.ac.id https://pmb.instiki.ac.id
+  curl -sI "https://<domain-portal>/embed?key=emb_..." | grep -i content-security
+  # semua situs:   Content-Security-Policy: frame-ancestors *
+  # dibatasi:      Content-Security-Policy: frame-ancestors 'self' https://pmb.instiki.ac.id
+  # tanpa kunci:   Content-Security-Policy: frame-ancestors 'self'
   ```
 
 - **Caddy / reverse proxy:** jangan menambahkan `Content-Security-Policy`
@@ -171,23 +236,24 @@ cd client && npm run dev -- -p 3001
 cd client/docs && python -m http.server 5500
 ```
 
-Buka `http://localhost:5500/`, lalu tekan **Tanya Asisten**. Alamat portal di
-`index.html` ditulis `http://localhost:3001`; ganti bila portal berjalan di
-tempat lain.
+Buat kunci di dashboard admin → **Sematan**, dengan `http://localhost:5500`
+di daftar domainnya (atau biarkan kosong). Lalu buka
+`http://localhost:5500/?key=emb_...` dan tekan **Tanya Asisten**. Halaman contoh
+memasang baris `<script>` dari `?key=` itu; alamat portal di `index.html` ditulis
+`http://localhost:3001`, ganti bila portal berjalan di tempat lain.
 
 - **Portal sudah berjalan dengan `npm run dev` di port lain?** Next.js 16
   menolak `next dev` kedua untuk direktori yang sama ("Another next dev server
-  is already running"). Pakai server yang sudah ada dan ganti port di baris
-  `<script>` terakhir `index.html`.
-
+  is already running"). Pakai server yang sudah ada dan ganti port di
+  `index.html`.
 - **Jangan membuka `index.html` dengan klik ganda.** Lewat `file://` tombolnya
-  muncul, tetapi panelnya ditolak: `frame-ancestors *` hanya mencakup situs
+  muncul, tetapi panelnya ditolak: `frame-ancestors` hanya mencakup situs
   http/https. Halaman contoh menampilkan peringatan bila dibuka begitu.
-- Bila portal belum berjalan, halaman contoh juga menampilkan peringatan
-  "embed.js tidak termuat".
+- Halaman contoh juga memperingatkan bila `?key=` belum diberikan, atau bila
+  portal belum berjalan ("embed.js tidak termuat").
 - Setiap pertanyaan yang dikirim tercatat di tabel `conversations` database
-  yang dipakai API, seperti pertanyaan dari portal. Bersihkan percakapan uji
-  dari DB dev bila perlu.
+  yang dipakai API, beserta kuncinya. Bersihkan percakapan uji dari DB dev bila
+  perlu.
 
 ---
 
@@ -197,12 +263,16 @@ Hampir semua masalah terlihat di konsol DevTools situs penyemat.
 
 | Gejala | Pesan di konsol | Penyebab dan perbaikan |
 |---|---|---|
+| Tombol tidak muncul | `[Asisten Administrasi] Atribut data-key belum diisi…` | Tag `<script>` tanpa `data-key`. Salin kode sematan lengkap dari menu Sematan. |
 | Tombol tidak muncul | `net::ERR_CONNECTION_REFUSED` / 404 untuk `embed.js` | Alamat script salah atau portal mati. Buka URL `embed.js` langsung di peramban. |
 | Tombol tidak muncul | `Loading the script '…/embed.js' violates … "script-src …"` | CSP situs penyemat. Tambahkan domain portal ke `script-src`. |
-| Tombol muncul, panel kosong | `Framing '…' violates … "frame-ancestors …"` | Situs belum terdaftar di `EMBED_ALLOWED_ORIGINS`, atau halaman dibuka lewat `file://`. Tambahkan asalnya lalu **build ulang** portal. |
+| Panel: "Asisten tidak tersedia di situs ini" | — | Kunci salah ketik, dinonaktifkan, atau dihapus. Periksa di menu Sematan. |
+| Panel: "Asisten sedang tidak dapat dimuat" | — | Server portal tidak dapat menghubungi API. Periksa `API_INTERNAL_URL` portal dan `GET /health` API. |
+| Tombol muncul, panel kosong | `Framing '…' violates … "frame-ancestors …"` | Domain situs belum ada di daftar kunci itu, atau halaman dibuka lewat `file://`. Tambahkan domainnya di menu Sematan — tidak perlu build ulang. |
 | Tombol muncul, panel kosong | `Framing '…' violates … "frame-src …"` | CSP situs penyemat. Tambahkan domain portal ke `frame-src`. |
+| Jawaban: "Terlalu banyak pertanyaan dalam waktu singkat" | 429 untuk `/api/chat/stream` | Batas laju per IP, per sesi, atau per situs tercapai. Bila banyak pengunjung sah kena, naikkan `RATE_LIMIT_*` di `.env` API (IP kampus dipakai bersama). |
+| Jawaban: "Layanan chat sedang dinonaktifkan sementara" | 503 untuk `/api/chat/stream` | Kill switch menyala — bisa karena batas pertanyaan harian tercapai. Lihat alasannya di halaman Konfigurasi dashboard. |
 | Panel tampil, jawaban berisi "Tidak dapat terhubung ke server" | Galat CORS atau `ERR_CONNECTION_REFUSED` untuk alamat API | API mati, `NEXT_PUBLIC_API_BASE_URL` portal salah, atau domain portal tidak ada di `CORS_ORIGINS` API. Periksa `GET /health`. |
-| `EMBED_ALLOWED_ORIGINS` diubah tetapi tidak berpengaruh | — | Nilainya dibekukan saat build. Jalankan `npm run build` / `start.sh` lagi. |
 
 Pesan dari iframe ikut tampil di konsol yang sama. Untuk menjalankan perintah
 di dalam iframe, ganti konteks `top` di tab Console ke frame `/embed`.
@@ -213,6 +283,8 @@ di dalam iframe, ganti konteks `top` di tab Console ke frame `/embed`.
 
 - Belum ada opsi tampilan: tombol selalu di kanan bawah dengan warna dan teks
   portal.
+- Batas laju per situs sama untuk semua kunci (`RATE_LIMIT_PER_EMBED_SITE`);
+  belum dapat diatur per kunci dari dashboard.
 - Warna dan ukuran tombol serta panel di `embed.js` disalin dari `.launcher` dan
   `.panel` di `chat.module.css`. Mengubah salah satunya berarti mengubah
   keduanya.
@@ -227,9 +299,11 @@ di dalam iframe, ganti konteks `top` di tab Console ke frame `/embed`.
 | Berkas | Isi |
 |---|---|
 | [`public/embed.js`](../public/embed.js) | Skrip sematan: tombol, iframe, pesan buka/tutup |
+| [`src/proxy.ts`](../src/proxy.ts) | Pemeriksaan kunci dan header `frame-ancestors` seluruh portal |
 | [`src/app/embed/page.tsx`](../src/app/embed/page.tsx) | Halaman `/embed` |
-| [`src/components/chat/embedded-chat.tsx`](../src/components/chat/embedded-chat.tsx) | Mode widget vs. halaman penuh; penerima pesan dari `embed.js` |
+| [`src/components/chat/embedded-chat.tsx`](../src/components/chat/embedded-chat.tsx) | Mode widget vs. halaman penuh; halaman "tidak tersedia"; penerima pesan dari `embed.js` |
 | [`src/components/chat/chat-panel.tsx`](../src/components/chat/chat-panel.tsx) | Panel chat, dipakai bersama widget portal |
-| [`next.config.ts`](../next.config.ts) | Header `frame-ancestors` dari `EMBED_ALLOWED_ORIGINS` |
-| [`.env.example`](../.env.example) | Contoh `EMBED_ALLOWED_ORIGINS` |
+| [`.env.example`](../.env.example) | `API_INTERNAL_URL` |
 | [`docs/index.html`](index.html) | Contoh situs penyemat |
+| `api/app/embed_keys.py`, `api/app/routers/embed.py`, `api/app/routers/admin_embed_keys.py` | Kunci sematan di API |
+| `admin/src/components/embed-keys/` | Halaman Sematan di dashboard |
