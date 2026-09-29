@@ -15,6 +15,8 @@ export type ChatEntry =
   | { id: number; role: "assistant"; state: "streaming"; text: string }
   | { id: number; role: "assistant"; state: "done"; reply: StreamedReply }
   | { id: number; role: "assistant"; state: "error"; message: string }
+  /** Mahasiswa menghentikan jawaban. Potongan yang sempat tampil dibuang. */
+  | { id: number; role: "assistant"; state: "cancelled" }
 
 /**
  * Keadaan kotak catatan 👎 (FE-5) untuk satu jawaban.
@@ -100,7 +102,12 @@ export function useChat(embedKey?: string) {
       )
       replace({ id: replyId, role: "assistant", state: "done", reply })
     } catch (error) {
-      if (isAbortError(error)) return
+      // Tanpa ini gelembungnya tertahan di "menunggu" selamanya, dan `busy`
+      // tidak pernah turun -- pertanyaan berikutnya tidak bisa dikirim.
+      if (isAbortError(error)) {
+        replace({ id: replyId, role: "assistant", state: "cancelled" })
+        return
+      }
       replace({
         id: replyId,
         role: "assistant",
@@ -179,6 +186,15 @@ export function useChat(embedKey?: string) {
 
   const feedback: FeedbackControls = { ratings, notes, rate, submitNote, dismissNote }
 
+  /**
+   * Hentikan jawaban yang sedang disusun. Server ikut membatalkan pipeline-nya
+   * saat aliran terputus, dan giliran itu tercatat `dibatalkan` di log.
+   * Tanpa tombol ini, LLM yang macet mengunci widget sampai timeout server.
+   */
+  function cancel() {
+    controller.current?.abort()
+  }
+
   /** Klik satu topik: dicatat sebagai giliran mahasiswa, lalu berlaku untuk pertanyaan berikutnya. */
   function chooseTopic(pilihan: string) {
     const id = nextId.current++
@@ -186,7 +202,7 @@ export function useChat(embedKey?: string) {
     setEntries((prev) => [...prev, { id, role: "topic", unit: pilihan }])
   }
 
-  return { entries, busy, send, feedback, unit, chooseTopic }
+  return { entries, busy, send, cancel, feedback, unit, chooseTopic }
 }
 
 function tanpa<T>(record: Record<string, T>, key: string): Record<string, T> {

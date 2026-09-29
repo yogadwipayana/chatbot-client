@@ -1,7 +1,7 @@
 "use client"
 
 import { Fragment, useEffect, useRef, useState } from "react"
-import { FaExchangeAlt, FaPaperPlane, FaRobot, FaTimes } from "react-icons/fa"
+import { FaExchangeAlt, FaPaperPlane, FaRobot, FaStop, FaTimes } from "react-icons/fa"
 
 import { fetchFaqQuestions, fetchUnits, type Unit } from "@/lib/api/chat"
 import { cx } from "@/lib/utils"
@@ -64,7 +64,7 @@ export function ChatPanel({
   // Kunci yang belum ada = masih dimuat.
   const [faq, setFaq] = useState<Record<string, string[]>>({})
   const faqDiminta = useRef(new Set<string>())
-  const { entries, busy, send, feedback, unit, chooseTopic } = useChat(embedKey)
+  const { entries, busy, send, cancel, feedback, unit, chooseTopic } = useChat(embedKey)
   const bannerEskalasi = bannerEskalasiTerakhir(entries)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -280,14 +280,28 @@ export function ChatPanel({
               autoComplete="off"
               aria-describedby={`${PANEL_ID}-sisa`}
             />
-            <button
-              type="submit"
-              className={styles.send}
-              disabled={busy || !draft.trim()}
-              aria-label="Kirim pertanyaan"
-            >
-              <FaPaperPlane aria-hidden />
-            </button>
+            {busy ? (
+              // Tempat yang sama dengan tombol kirim: selagi jawaban disusun,
+              // satu-satunya tindakan yang masuk akal adalah menghentikannya.
+              <button
+                type="button"
+                className={styles.send}
+                onClick={cancel}
+                aria-label="Hentikan jawaban"
+                title="Hentikan jawaban"
+              >
+                <FaStop aria-hidden />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                className={styles.send}
+                disabled={!draft.trim()}
+                aria-label="Kirim pertanyaan"
+              >
+                <FaPaperPlane aria-hidden />
+              </button>
+            )}
           </form>
         ) : (
           <p className={styles.composerHint}>

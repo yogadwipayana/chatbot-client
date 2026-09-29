@@ -23,8 +23,12 @@ export interface paths {
          *     penulisan ulang query (FR-4) -> retrieval hibrida (FR-2) -> ambang
          *     penolakan (FR-3) -> deteksi topik berisiko (FR-6) -> generasi (FR-5).
          *
-         *     LLM tidak dipanggil sama sekali bila `kind` bernilai `refusal` atau
-         *     `support`.
+         *     LLM tidak dipanggil sama sekali bila `kind` bernilai `support`, begitu
+         *     pula `refusal` yang diputuskan ambang FR-3. `refusal` juga dapat datang
+         *     dari LLM yang menilai konteksnya tidak menjawab; bentuknya sama persis
+         *     (teks penolakan + kontak, tanpa sitasi). Di `/api/chat/stream`, token
+         *     yang sempat dialirkan sebelum penolakan itu diputuskan (biasanya tidak
+         *     ada) digantikan isi event `message`, sama seperti jawaban biasa.
          */
         post: operations["chat"];
         delete?: never;
@@ -1176,8 +1180,9 @@ export interface components {
              *     "Sumber" memaksa mahasiswa menebak kartu mana yang relevan.
              *
              *     Sitasi ke dokumen di luar konteks (sumber karangan) tidak pernah
-             *     ikut: tautannya buntu. Jawaban tanpa satu pun penanda sitasi jatuh
-             *     kembali ke seluruh chunk terambil, supaya verifikasi tetap mungkin.
+             *     ikut: tautannya buntu. Jawaban tanpa satu pun penanda sitasi
+             *     (misalnya balasan sapaan dari LLM) tidak membawa kartu sama sekali:
+             *     chunk yang tidak dikutip bukan sumber jawabannya.
              *
              *     Selalu kosong bila `kind` bukan `answer`.
              * @default []
@@ -1480,6 +1485,20 @@ export interface components {
                 vector?: number;
                 fulltext?: number;
             };
+            /**
+             * Format: uuid
+             * @description `chunk_id` sumbernya bila ini potongan lanjutan (`RETRIEVAL_NEIGHBORS`): ikut karena sumbernya, jadi `raw_scores` dan `ranks` kosong.
+             */
+            neighbor_of?: string | null;
+        };
+        /** @description Vonis gerbang JEV pada uji coba ini. */
+        GateVerdictOut: {
+            /** @enum {string} */
+            label: "academic" | "smalltalk" | "nonsense" | "malicious" | "out_of_scope";
+            confidence: number;
+            blocked: boolean;
+            /** @description Galat atau lewat tenggat; saat itu pesan diteruskan (fail-open). */
+            error?: string | null;
         };
         TestQueryRequest: {
             question: string;
@@ -1503,9 +1522,9 @@ export interface components {
             kind: components["schemas"]["OutcomeKind"];
             text: string;
             rewritten_query?: string | null;
-            /** @description Tetap terisi saat ditolak -- justru itu yang perlu dilihat saat diagnosa. */
+            /** @description Tetap terisi saat ditolak ambang atau LLM -- justru itu yang perlu dilihat saat diagnosa. Kosong bila diblokir gerbang JEV: pencariannya dihentikan. */
             retrieved: components["schemas"]["RetrievedChunk"][];
-            /** @description null bila pertanyaan dialihkan ke konseling (FR-7) sebelum retrieval. */
+            /** @description null bila alur berhenti sebelum ambang dinilai: konseling (FR-7), sapaan, atau diblokir gerbang JEV. */
             decision: {
                 /** @enum {string} */
                 decision: "proceed" | "refuse";
@@ -1515,6 +1534,15 @@ export interface components {
                 top_lexical_score?: number | null;
             } | null;
             thresholds: components["schemas"]["ThresholdValues"];
+            /** @default false */
+            llm_called: boolean;
+            /**
+             * @description Hanya untuk `refusal`: `threshold` = ambang FR-3 menolak dan LLM tidak dipanggil; `llm` = lolos ambang, tetapi LLM menilai isinya tidak menjawab.
+             * @enum {string|null}
+             */
+            refusal_source?: "threshold" | "llm" | null;
+            /** @description Vonis gerbang JEV; null bila JEV mati atau alur berhenti sebelumnya. */
+            gate?: components["schemas"]["GateVerdictOut"] | null;
             /** @description Kontak yang akan dilihat mahasiswa untuk pertanyaan yang sama (FE-3, FE-4). */
             contacts: components["schemas"]["ContactOut"][];
             escalated: boolean;
@@ -1633,6 +1661,8 @@ export interface components {
             p95_total_ms: number | null;
             error_turn_count: number;
             error_ratio: number;
+            /** @description Giliran `dibatalkan` (mahasiswa menghentikan jawaban atau menutup panel). Tidak termasuk `error_turn_count`. */
+            cancelled_turn_count: number;
             jev_blocked_count: number;
             jev_blocked_ratio: number;
             /** @description Log ERROR ke atas. Untuk role admin, log audit tidak dihitung. */

@@ -37,8 +37,10 @@ export type StreamHandlers = {
   onStatus?: (stage: string) => void
   /**
    * Satu potongan jawaban, bukan jawaban yang bertambah panjang -- pemanggil
-   * merangkainya sendiri. Tidak pernah dipanggil untuk penolakan dan balasan
-   * dukungan: keduanya tidak melewati LLM.
+   * merangkainya sendiri. Tidak dipanggil untuk balasan dukungan dan penolakan
+   * ambang FR-3: keduanya tidak melewati LLM. Penolakan yang diputuskan LLM
+   * bisa didahului beberapa potongan; event `message` yang menentukan tampilan
+   * akhirnya.
    */
   onToken?: (potongan: string) => void
 }

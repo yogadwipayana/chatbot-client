@@ -104,6 +104,14 @@ export function AssistantMessage({
     return <BotBubble tone="error">{entry.message}</BotBubble>
   }
 
+  if (entry.state === "cancelled") {
+    return (
+      <BotBubble tone="pending">
+        Jawaban dihentikan. Kirim ulang pertanyaan bila masih diperlukan.
+      </BotBubble>
+    )
+  }
+
   const { response, complete } = entry.reply
   // Sapaan tidak dinilai (bukan jawaban), begitu pula balasan dukungan --
   // meminta mahasiswa yang sedang tertekan menilai balasan tidak pantas.
