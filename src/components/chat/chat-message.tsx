@@ -158,25 +158,38 @@ export function AssistantMessage({
   )
 }
 
+/** Tebal `**...**` atau kode sebaris `` `...` ``, mana yang lebih dulu muncul. */
+const PENANDA_MARKDOWN = /(\*\*[\s\S]+?\*\*|`[^`\n]+`)/g
+
 /**
- * Model kadang menulis penekanan Markdown (`**3 Agustus 2026**`). Hanya tebal
- * yang diterjemahkan; sisanya -- termasuk penanda sitasi `[Judul, hal. 12]` --
- * ditampilkan apa adanya.
+ * Model kadang menulis penekanan Markdown: tebal (`**3 Agustus 2026**`) dan
+ * kode sebaris (`` `TRANSFER NomorVA NOMINAL` `` -- format SMS, kode bank).
+ * Hanya dua itu yang diterjemahkan; sisanya -- termasuk penanda sitasi
+ * `[Judul, hal. 12]` -- ditampilkan apa adanya. Admin memakai salinan yang
+ * sama (`RichText` di `admin/src/components/common.tsx`).
  *
  * `tautKontak`: nomor telepon dijadikan tautan. Hanya untuk teks yang disusun
  * server dari daftar kontak (penolakan, dukungan), bukan jawaban LLM.
  */
 function RichText({ text, tautKontak = false }: { text: string; tautKontak?: boolean }) {
-  const bagian = text.split(/\*\*([\s\S]+?)\*\*/g)
+  const bagian = text.split(PENANDA_MARKDOWN)
   return (
     <>
       {bagian.map((teks, index) =>
-        index % 2 === 1 ? (
-          <strong key={index}>{teks}</strong>
-        ) : tautKontak ? (
-          <TeksKontak key={index} text={teks} />
+        index % 2 === 0 ? (
+          tautKontak ? (
+            <TeksKontak key={index} text={teks} />
+          ) : (
+            teks
+          )
+        ) : teks.startsWith("`") ? (
+          <code key={index} className={styles.code}>
+            {teks.slice(1, -1)}
+          </code>
         ) : (
-          teks
+          <strong key={index}>
+            <RichText text={teks.slice(2, -2)} />
+          </strong>
         )
       )}
     </>

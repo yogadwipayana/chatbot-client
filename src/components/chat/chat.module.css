@@ -213,6 +213,16 @@
   overflow-wrap: anywhere;
 }
 
+/* Kode sebaris dari jawaban model (`TRANSFER NomorVA NOMINAL`). */
+.code {
+  padding: 1px 5px;
+  border: 1px solid var(--chat-line);
+  border-radius: 4px;
+  background: var(--chat-bg);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
 .msgUser .text {
   --bubble-bg: var(--red);
   --bubble-border: var(--red);
