@@ -672,6 +672,77 @@
   color: #fff;
 }
 
+/* NIM opsional di atas ubin topik. Sebaris dengan labelnya supaya seluruh
+   daftar ubin tetap muat tanpa digulir. */
+.nim {
+  margin: -4px 0 12px;
+}
+
+.nim + .topics {
+  margin-top: 0;
+}
+
+.nimRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nimLabel {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.nimLabel span {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.nimInput {
+  flex: 1;
+  min-width: 0;
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--chat-line);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  transition: border-color 0.15s;
+}
+
+.nimInput:focus {
+  border-color: #f1b5ad;
+  outline: none;
+}
+
+.nimInput[aria-invalid="true"] {
+  border-color: var(--red);
+}
+
+.nimInfo {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 4px 4px 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.nimInfoError {
+  color: #a94442;
+}
+
+/* Ikonnya saja yang hijau: teks hijau di latar putih tidak cukup kontras. */
+.nimOk {
+  flex: none;
+  color: var(--green-dark);
+}
+
 /* --- Pertanyaan siap klik per topik -------------------------------------- */
 
 .faqQuestions {

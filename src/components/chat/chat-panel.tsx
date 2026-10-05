@@ -3,12 +3,19 @@
 import { Fragment, useEffect, useRef, useState } from "react"
 import { FaExchangeAlt, FaPaperPlane, FaRobot, FaStop, FaTimes } from "react-icons/fa"
 
-import { fetchFaqQuestions, fetchUnits, type Unit } from "@/lib/api/chat"
+import {
+  fetchFaqQuestions,
+  fetchPrograms,
+  fetchUnits,
+  type Program,
+  type Unit,
+} from "@/lib/api/chat"
+import { uraiNim } from "@/lib/nim"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
 import { AssistantMessage, BotBubble, UserMessage } from "./chat-message"
-import { FaqQuestions, TopicMenu, topicReply } from "./topic-menu"
+import { FaqQuestions, NimField, TopicMenu, topicReply } from "./topic-menu"
 import { bannerEskalasiTerakhir, useChat } from "./use-chat"
 
 export const PANEL_ID = "asisten-administrasi"
@@ -60,11 +67,22 @@ export function ChatPanel({
   // pertanyaan langsung tersedia dengan pencarian ke semua unit -- chat tidak
   // boleh terkunci hanya karena daftar unit gagal dimuat.
   const [units, setUnits] = useState<Unit[] | null>(null)
+  // Dimuat bersama `units`. Kosong (gagal dimuat) = tanpa isian NIM: tanpa
+  // daftar prodi NIM-nya tidak dapat diurai.
+  const [programs, setPrograms] = useState<Program[]>([])
+  // NIM hanya hidup di sini dan tidak pernah dikirim; yang ikut pertanyaan
+  // adalah hasil uraiannya. Sengaja tidak disimpan di localStorage: di
+  // komputer lab bersama, NIM mahasiswa sebelumnya tidak boleh terisi sendiri.
+  const [nim, setNim] = useState("")
+  const hasilNim = uraiNim(nim, programs)
   // Pertanyaan siap klik per topik, kuncinya nama unit.
   // Kunci yang belum ada = masih dimuat.
   const [faq, setFaq] = useState<Record<string, string[]>>({})
   const faqDiminta = useRef(new Set<string>())
-  const { entries, busy, send, cancel, feedback, unit, chooseTopic } = useChat(embedKey)
+  const { entries, busy, send, cancel, feedback, unit, chooseTopic } = useChat(
+    embedKey,
+    hasilNim.status === "sah" ? hasilNim.profil : null
+  )
   const bannerEskalasi = bannerEskalasiTerakhir(entries)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -77,24 +95,35 @@ export function ChatPanel({
   // Satu menu saja, pindah tempat: di sapaan selagi belum ada topik, dan di
   // dasar percakapan saat dibuka lagi -- di sana ia terlihat tanpa menggulir
   // balik ke atas, tepat di atas kotak pertanyaan.
+  // NIM ikut pindah bersama ubinnya: dibuka lagi lewat "Ganti topik", di
+  // situlah NIM yang salah ketik diperbaiki.
   const menu = adaTopik ? (
-    <TopicMenu
-      id={`${PANEL_ID}-topik`}
-      units={units}
-      active={sudahMemilih ? unit : undefined}
-      onPick={(pilihan) => {
-        setMenuTerbuka(false)
-        chooseTopic(pilihan)
-      }}
-    />
+    <>
+      {programs.length > 0 && (
+        <NimField id={`${PANEL_ID}-nim`} value={nim} onChange={setNim} hasil={hasilNim} />
+      )}
+      <TopicMenu
+        id={`${PANEL_ID}-topik`}
+        units={units}
+        active={sudahMemilih ? unit : undefined}
+        onPick={(pilihan) => {
+          setMenuTerbuka(false)
+          chooseTopic(pilihan)
+        }}
+      />
+    </>
   ) : null
 
   useEffect(() => {
     if (!open || units !== null) return
     const controller = new AbortController()
-    fetchUnits(controller.signal).then((items) => {
-      if (!controller.signal.aborted) setUnits(items)
-    })
+    void Promise.all([fetchUnits(controller.signal), fetchPrograms(controller.signal)]).then(
+      ([items, prodi]) => {
+        if (controller.signal.aborted) return
+        setPrograms(prodi)
+        setUnits(items)
+      }
+    )
     return () => controller.abort()
   }, [open, units])
 
@@ -236,6 +265,8 @@ export function ChatPanel({
           <div className={styles.scopeBar}>
             <span className={styles.scopeName}>
               Topik: <strong>{unit}</strong>
+              {hasilNim.status === "sah" &&
+                ` · ${hasilNim.prodi.name} ${hasilNim.profil.intake_year}`}
             </span>
             <button
               type="button"

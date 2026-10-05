@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from "react"
 
 import { ApiError, GAGAL_TERHUBUNG, isAbortError } from "@/lib/api/client"
-import { sendFeedback, streamChat, type StreamedReply, type Turn } from "@/lib/api/chat"
+import {
+  sendFeedback,
+  streamChat,
+  type StreamedReply,
+  type StudentProfile,
+  type Turn,
+} from "@/lib/api/chat"
 import { getSessionId } from "@/lib/session"
 
 export type ChatEntry =
@@ -37,8 +43,14 @@ export type FeedbackControls = {
 /** Server hanya memakai 3 pesan terakhir untuk penulisan ulang query (FR-4). */
 const HISTORY_LIMIT = 3
 
-/** `embedKey`: kunci situs penyemat, dikirim bersama setiap pertanyaan dan penilaian. */
-export function useChat(embedKey?: string) {
+/**
+ * `embedKey`: kunci situs penyemat, dikirim bersama setiap pertanyaan dan penilaian.
+ *
+ * `profil`: prodi dan angkatan hasil urai NIM (`lib/nim.ts`), ikut setiap
+ * pertanyaan berikutnya. NIM-nya sendiri tetap di ChatPanel dan tidak pernah
+ * sampai ke sini.
+ */
+export function useChat(embedKey?: string, profil: StudentProfile | null = null) {
   const [entries, setEntries] = useState<ChatEntry[]>([])
   // Topik yang sedang berlaku untuk pertanyaan yang DIKETIK; null = semua unit.
   // Sengaja tidak disimpan di localStorage: topik kemarin yang diam-diam masih
@@ -85,7 +97,7 @@ export function useChat(embedKey?: string) {
       // ditampilkan selagi berjalan. Jawaban yang sah tetap `reply.response.text`.
       let jawaban = ""
       const reply = await streamChat(
-        { question, session_id: getSessionId(), history, unit: tujuan },
+        { question, session_id: getSessionId(), history, unit: tujuan, profile: profil },
         {
           signal: current.signal,
           embedKey,

@@ -16,6 +16,8 @@ export type Turn = Schemas["TurnIn"]
 export type Suggestion = Schemas["Suggestion"]
 export type Unit = Schemas["UnitOut"]
 export type FaqQuestion = Schemas["FaqQuestion"]
+export type Program = Schemas["ProgramOut"]
+export type StudentProfile = Schemas["StudentProfileIn"]
 
 export type StreamedReply = {
   response: ChatResponse
@@ -110,6 +112,21 @@ export async function fetchUnits(signal?: AbortSignal): Promise<Unit[]> {
     if (!response.ok) return []
     const data: unknown = await response.json()
     return Array.isArray(data) ? (data as Unit[]) : []
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Daftar prodi untuk mengurai NIM (`lib/nim.ts`). Gagal dimuat berarti isian NIM
+ * tidak tampil dan jawaban tidak disesuaikan: profil penyempurna, bukan syarat.
+ */
+export async function fetchPrograms(signal?: AbortSignal): Promise<Program[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/programs`, { signal })
+    if (!response.ok) return []
+    const data: unknown = await response.json()
+    return Array.isArray(data) ? (data as Program[]) : []
   } catch {
     return []
   }
