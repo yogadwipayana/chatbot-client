@@ -70,6 +70,11 @@ export function ChatPanel({
   // Dimuat bersama `units`. Kosong (gagal dimuat) = tanpa isian NIM: tanpa
   // daftar prodi NIM-nya tidak dapat diurai.
   const [programs, setPrograms] = useState<Program[]>([])
+  // Daftar prodi yang gagal dimuat dicoba lagi setiap kali panel dibuka lagi;
+  // tanpanya isian NIM baru kembali setelah halaman dimuat ulang. Ref, bukan
+  // state: percobaannya menunggu panel dibuka lagi, tidak langsung menyusul
+  // kegagalan yang baru saja terjadi.
+  const prodiPerluDicobaLagi = useRef(false)
   // NIM hanya hidup di sini dan tidak pernah dikirim; yang ikut pertanyaan
   // adalah hasil uraiannya. Sengaja tidak disimpan di localStorage: di
   // komputer lab bersama, NIM mahasiswa sebelumnya tidak boleh terisi sendiri.
@@ -120,12 +125,26 @@ export function ChatPanel({
     void Promise.all([fetchUnits(controller.signal), fetchPrograms(controller.signal)]).then(
       ([items, prodi]) => {
         if (controller.signal.aborted) return
+        prodiPerluDicobaLagi.current = prodi.length === 0
         setPrograms(prodi)
         setUnits(items)
       }
     )
     return () => controller.abort()
   }, [open, units])
+
+  // Unit sengaja tidak ikut dicoba lagi: menu topik yang tiba-tiba muncul di
+  // tengah percakapan tanpa topik akan menyembunyikan kotak pertanyaannya.
+  useEffect(() => {
+    if (!open || !prodiPerluDicobaLagi.current) return
+    const controller = new AbortController()
+    void fetchPrograms(controller.signal).then((prodi) => {
+      if (controller.signal.aborted) return
+      prodiPerluDicobaLagi.current = prodi.length === 0
+      setPrograms(prodi)
+    })
+    return () => controller.abort()
+  }, [open])
 
   useEffect(() => {
     for (const entry of entries) {
