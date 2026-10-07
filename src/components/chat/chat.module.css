@@ -647,10 +647,15 @@
   transition: border-color 0.15s, background-color 0.15s, color 0.15s;
 }
 
-.topic:hover {
+.topic:hover:not(:disabled) {
   border-color: var(--red);
   background: #fff7f6;
   color: var(--red);
+}
+
+.topic:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .topic:focus-visible {
@@ -835,6 +840,12 @@
   border-color: var(--red);
   background: #fff7f6;
   color: var(--red);
+}
+
+/* Selama NIM belum sah daftarnya tidak boleh ditutup. */
+.scopeChange:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Kotaknya tumbuh ke atas, jadi tombol kirim tetap sejajar baris terakhir. */

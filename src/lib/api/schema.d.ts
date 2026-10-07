@@ -206,10 +206,10 @@ export interface paths {
         };
         /**
          * Daftar program studi
-         * @description Untuk mengurai NIM di widget. NIM INSTIKI berformat `aaabbddccc`:
-         *     digit 4-7 (`bbdd`, fakultas lalu prodi) dicocokkan dengan `code` di
-         *     sini, dan hanya kode itu beserta angkatan yang dikirim sebagai
-         *     `profile` pada `/api/chat/stream`. NIM utuh tidak pernah dikirim.
+         * @description Untuk memeriksa dan menampilkan NIM di widget sebelum dikirim. NIM
+         *     INSTIKI berformat `aaabbddccc`: digit 4-7 (`bbdd`, fakultas lalu
+         *     prodi) dicocokkan dengan `code` di sini. NIM dengan kode di luar daftar
+         *     ini ditolak 422 oleh `/api/chat`.
          *
          *     Tidak tunduk pada kill switch, sama seperti `GET /api/units`.
          */
@@ -1144,33 +1144,21 @@ export interface components {
              */
             unit?: string | null;
             /**
-             * @description Prodi dan angkatan penanya, diurai widget dari NIM. Kosongkan atau
-             *     kirim null bila mahasiswa tidak mengisi NIM.
+             * @description Wajib. NIM INSTIKI `aaabbddccc`: angkatan (2000 + dua digit
+             *     pertama), fakultas dan prodi (digit 4-7, `code` dari
+             *     `GET /api/programs`), lalu nomor urut. Mis. `2401010101` =
+             *     Informatika angkatan 2024. Kode prodi yang tidak dikenal atau
+             *     angkatan yang belum tiba dijawab 422. Tidak dicocokkan ke data
+             *     mahasiswa.
              *
-             *     BUKAN filter retrieval: diteruskan ke LLM supaya ketentuan yang di
-             *     dokumen berbeda per prodi atau angkatan (harga sertifikasi per
-             *     prodi, kurikulum per angkatan) dijawab untuk penanya. Dicatat di
-             *     `messages.meta` untuk analitik, kecuali untuk balasan `support`.
+             *     Prodi dan angkatannya -- bukan NIM-nya -- diteruskan ke LLM supaya
+             *     ketentuan yang di dokumen berbeda per prodi atau angkatan (harga
+             *     sertifikasi per prodi, kurikulum per angkatan) dijawab untuk
+             *     penanya. BUKAN filter retrieval. NIM utuh dicatat di
+             *     `messages.meta` bersama prodi dan angkatannya; untuk balasan
+             *     `support` hanya NIM-nya (PRD §11).
              */
-            profile?: components["schemas"]["StudentProfileIn"] | null;
-        };
-        /**
-         * @description Angkatan dan prodi penanya. JANGAN kirim NIM utuh: NIM INSTIKI
-         *     berformat `aaabbddccc` (angkatan, fakultas, prodi, nomor urut), dan
-         *     nomor urutnya mengenali orang (PRD §11). Contoh: NIM `2401010101`
-         *     menjadi `{program_code: "1010", intake_year: 2024}`.
-         */
-        StudentProfileIn: {
-            /**
-             * @description `code` dari `GET /api/programs` (digit 4-7 NIM). Kode yang tidak
-             *     dikenal dijawab 422.
-             */
-            program_code: string;
-            /**
-             * @description Tahun angkatan: 2000 + dua digit pertama NIM. Tahun yang belum tiba
-             *     dijawab 422.
-             */
-            intake_year: number;
+            nim: string;
         };
         /**
          * @description Isi kartu sitasi FE-2. Cukup untuk membuka PDF tepat di halamannya:
@@ -1209,7 +1197,7 @@ export interface components {
         };
         /** @description Satu program studi, untuk mengurai dan menampilkan NIM di widget. */
         ProgramOut: {
-            /** @description Digit 4-7 NIM; dikirim sebagai `profile.program_code`. */
+            /** @description Digit 4-7 NIM. */
             code: string;
             name: string;
             /** @description `S1` atau `S2`. */
@@ -1695,10 +1683,11 @@ export interface components {
              */
             latency_p95_ms: number | null;
             /**
-             * @description Pertanyaan yang penanyanya mengisi NIM di widget. Penyebut kedua
-             *     rincian di bawah -- BUKAN `total_questions`, yang juga memuat
-             *     penanya tanpa NIM. Balasan `support` tidak pernah ikut: profilnya
-             *     sengaja tidak dicatat.
+             * @description Pertanyaan yang tercatat bersama prodi dan angkatan penanya.
+             *     Penyebut kedua rincian di bawah -- BUKAN `total_questions`, yang
+             *     juga memuat pertanyaan dari sebelum NIM tersedia (NIM opsional
+             *     2026-10-05, wajib sejak 2026-10-07). Balasan `support` tidak pernah
+             *     ikut: profilnya sengaja tidak dicatat.
              */
             questions_with_profile: number;
             /**

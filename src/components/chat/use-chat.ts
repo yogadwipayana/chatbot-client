@@ -7,7 +7,6 @@ import {
   sendFeedback,
   streamChat,
   type StreamedReply,
-  type StudentProfile,
   type Turn,
 } from "@/lib/api/chat"
 import { getSessionId } from "@/lib/session"
@@ -46,11 +45,10 @@ const HISTORY_LIMIT = 3
 /**
  * `embedKey`: kunci situs penyemat, dikirim bersama setiap pertanyaan dan penilaian.
  *
- * `profil`: prodi dan angkatan hasil urai NIM (`lib/nim.ts`), ikut setiap
- * pertanyaan berikutnya. NIM-nya sendiri tetap di ChatPanel dan tidak pernah
- * sampai ke sini.
+ * `nim`: NIM penanya yang sudah diperiksa `lib/nim.ts`, ikut setiap pertanyaan.
+ * Wajib: selama null, tidak ada pertanyaan yang dikirim -- API toh menolaknya.
  */
-export function useChat(embedKey?: string, profil: StudentProfile | null = null) {
+export function useChat(embedKey?: string, nim: string | null = null) {
   const [entries, setEntries] = useState<ChatEntry[]>([])
   // Topik yang sedang berlaku untuk pertanyaan yang DIKETIK; null = semua unit.
   // Sengaja tidak disimpan di localStorage: topik kemarin yang diam-diam masih
@@ -75,7 +73,7 @@ export function useChat(embedKey?: string, profil: StudentProfile | null = null)
    */
   async function send(input: string, tujuan: string | null = unit) {
     const question = input.trim()
-    if (!question || busy) return
+    if (!question || busy || nim === null) return
 
     const history = toHistory(entries)
     const userId = nextId.current++
@@ -97,7 +95,7 @@ export function useChat(embedKey?: string, profil: StudentProfile | null = null)
       // ditampilkan selagi berjalan. Jawaban yang sah tetap `reply.response.text`.
       let jawaban = ""
       const reply = await streamChat(
-        { question, session_id: getSessionId(), history, unit: tujuan, profile: profil },
+        { question, session_id: getSessionId(), history, unit: tujuan, nim },
         {
           signal: current.signal,
           embedKey,

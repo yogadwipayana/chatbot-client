@@ -1,18 +1,22 @@
-import type { Program, StudentProfile } from "@/lib/api/chat"
+import type { Program } from "@/lib/api/chat"
 
 /** NIM INSTIKI: `aaabbddccc` -- angkatan, fakultas, prodi, nomor urut. */
 export const PANJANG_NIM = 10
 
 export type HasilNim =
+  /** Daftar prodi gagal dimuat: NIM apa pun belum dapat diperiksa. */
+  | { status: "tanpa-daftar" }
   | { status: "kosong" }
   | { status: "belum-lengkap" }
   | { status: "tidak-dikenal"; pesan: string }
-  | { status: "sah"; profil: StudentProfile; prodi: Program }
+  | { status: "sah"; nim: string; prodi: Program; angkatan: number }
 
 /**
- * Urai NIM menjadi profil yang boleh dikirim ke API: kode prodi (`bbdd`) dan
- * tahun angkatan. Nomor urutnya (`ccc`) -- satu-satunya bagian yang mengenali
- * orang -- tidak pernah keluar dari fungsi ini (PRD §11).
+ * Periksa NIM sebelum dikirim, dengan aturan yang sama dengan API
+ * (`app.prodi.urai_nim`): kode prodi dari digit 4-7, angkatan dari dua digit
+ * pertama. NIM wajib dan dikirim utuh; hasil uraian di sini hanya untuk
+ * memberi tahu mahasiswa lebih awal -- prodi dan angkatan yang dipakai
+ * jawaban dan dicatat tetap diurai API sendiri.
  *
  * "240" berarti angkatan 2024: dua digit pertama adalah tahunnya. Digit ketiga
  * tidak dipakai.
@@ -22,6 +26,7 @@ export function uraiNim(
   programs: Program[],
   tahunIni: number = new Date().getFullYear()
 ): HasilNim {
+  if (programs.length === 0) return { status: "tanpa-daftar" }
   if (nim === "") return { status: "kosong" }
   if (!/^\d+$/.test(nim) || nim.length !== PANJANG_NIM) return { status: "belum-lengkap" }
 
@@ -31,9 +36,5 @@ export function uraiNim(
   if (angkatan > tahunIni) {
     return { status: "tidak-dikenal", pesan: "Angkatan pada NIM ini tidak sesuai." }
   }
-  return {
-    status: "sah",
-    profil: { program_code: prodi.code, intake_year: angkatan },
-    prodi,
-  }
+  return { status: "sah", nim, prodi, angkatan }
 }

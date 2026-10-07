@@ -24,12 +24,15 @@ export function TopicMenu({
   units,
   active,
   onPick,
+  disabled,
   id,
 }: {
   units: Unit[]
   /** Topik yang sedang berlaku; undefined = belum memilih. */
   active: string | null | undefined
   onPick: (unit: string) => void
+  /** Selama NIM belum sah: memilih topik berarti mulai bertanya. */
+  disabled: boolean
   id?: string
 }) {
   return (
@@ -43,6 +46,7 @@ export function TopicMenu({
             className={cx(styles.topic, aktif && styles.topicActive)}
             aria-pressed={aktif}
             onClick={() => onPick(unit.name)}
+            disabled={disabled}
           >
             {unit.name}
           </button>
@@ -53,9 +57,11 @@ export function TopicMenu({
 }
 
 /**
- * Isian NIM di atas ubin topik: opsional, supaya jawaban yang di dokumen berbeda
- * per prodi atau angkatan -- harga sertifikasi, kurikulum -- dijawab untuk
- * penanya. Dosen, staf, dan calon mahasiswa tetap bisa langsung memilih topik.
+ * Isian NIM di atas ubin topik. Wajib: ubin topik dan kotak pertanyaan baru
+ * aktif setelah NIM-nya sah. Jawaban yang di dokumen berbeda per prodi atau
+ * angkatan -- harga sertifikasi, kurikulum -- dijawab untuk penanya, dan NIM-nya
+ * dicatat bersama pertanyaan; teks di bawah isian memberi tahu keduanya
+ * sebelum NIM diketik.
  *
  * Hanya angka yang diterima. Hasil uraiannya ditampilkan di bawahnya, jadi NIM
  * yang salah ketik terlihat sebelum pertanyaan pertama terkirim.
@@ -71,12 +77,12 @@ export function NimField({
   onChange: (nim: string) => void
   hasil: HasilNim
 }) {
-  const salah = hasil.status === "tidak-dikenal"
+  const salah = hasil.status === "tidak-dikenal" || hasil.status === "tanpa-daftar"
   return (
     <div className={styles.nim}>
       <div className={styles.nimRow}>
         <label htmlFor={id} className={styles.nimLabel}>
-          NIM <span>(opsional)</span>
+          NIM <span>(wajib)</span>
         </label>
         <input
           id={id}
@@ -91,6 +97,7 @@ export function NimField({
           inputMode="numeric"
           autoComplete="off"
           placeholder="mis. 2401010101"
+          required
           aria-invalid={salah}
           aria-describedby={`${id}-info`}
         />
@@ -99,14 +106,16 @@ export function NimField({
         {hasil.status === "sah" ? (
           <>
             <FaCheck aria-hidden className={styles.nimOk} />
-            {hasil.prodi.name} ({hasil.prodi.level}) · angkatan {hasil.profil.intake_year}
+            {hasil.prodi.name} ({hasil.prodi.level}) · angkatan {hasil.angkatan}
           </>
         ) : hasil.status === "tidak-dikenal" ? (
           hasil.pesan
+        ) : hasil.status === "tanpa-daftar" ? (
+          "Daftar prodi gagal dimuat, jadi NIM belum dapat diperiksa. Tutup lalu buka lagi panel ini, atau muat ulang halaman."
         ) : hasil.status === "belum-lengkap" ? (
           `NIM terdiri dari ${PANJANG_NIM} angka.`
         ) : (
-          "Agar jawaban disesuaikan dengan prodi dan angkatan Anda. NIM tidak dikirim."
+          "Jawaban disesuaikan dengan prodi dan angkatan Anda. NIM dicatat bersama pertanyaan Anda."
         )}
       </p>
     </div>

@@ -33,9 +33,10 @@ const MAKS_KARAKTER = 200
  * Isi asisten administrasi (FE-1..FE-5), dipakai widget portal dan halaman
  * `/embed` yang dimuat situs lain.
  *
- * Percakapan dimulai dari menu topik, seperti halaman FAQ: kotak pertanyaan
- * baru muncul setelah mahasiswa memilih unit, supaya setiap pertanyaan sudah
- * dipersempit ke dokumen unit yang menanganinya. Sesudah itu menunya minggir
+ * Percakapan dimulai dari NIM (wajib) lalu menu topik, seperti halaman FAQ:
+ * kotak pertanyaan baru muncul setelah mahasiswa mengisi NIM yang sah dan
+ * memilih unit, supaya setiap pertanyaan sudah dipersempit ke dokumen unit yang
+ * menanganinya. Sesudah itu menunya minggir
  * -- yang dibaca tinggal percakapan -- dan topiknya diganti lewat tombol di
  * dekat kotak pertanyaan. Saran pertanyaan umum (FE-6) sengaja tidak
  * ditampilkan di sapaan -- mengkliknya akan melewati pilihan unit; pertanyaan
@@ -64,29 +65,31 @@ export function ChatPanel({
   const [menuTerbuka, setMenuTerbuka] = useState(false)
   // null = belum dimuat; dimuat saat panel pertama kali dibuka, bukan tiap
   // halaman dibuka. Kosong (gagal dimuat) = tanpa menu topik, dan kotak
-  // pertanyaan langsung tersedia dengan pencarian ke semua unit -- chat tidak
-  // boleh terkunci hanya karena daftar unit gagal dimuat.
+  // pertanyaan langsung tersedia -- setelah NIM sah -- dengan pencarian ke
+  // semua unit: chat tidak boleh terkunci hanya karena daftar unit gagal dimuat.
   const [units, setUnits] = useState<Unit[] | null>(null)
-  // Dimuat bersama `units`. Kosong (gagal dimuat) = tanpa isian NIM: tanpa
-  // daftar prodi NIM-nya tidak dapat diurai.
+  // Dimuat bersama `units`. Kosong (gagal dimuat) = NIM belum dapat diperiksa,
+  // dan karena NIM wajib, kotak pertanyaan menunggu sampai daftar ini termuat.
   const [programs, setPrograms] = useState<Program[]>([])
   // Daftar prodi yang gagal dimuat dicoba lagi setiap kali panel dibuka lagi;
-  // tanpanya isian NIM baru kembali setelah halaman dimuat ulang. Ref, bukan
+  // tanpanya chat terkunci sampai halaman dimuat ulang. Ref, bukan
   // state: percobaannya menunggu panel dibuka lagi, tidak langsung menyusul
   // kegagalan yang baru saja terjadi.
   const prodiPerluDicobaLagi = useRef(false)
-  // NIM hanya hidup di sini dan tidak pernah dikirim; yang ikut pertanyaan
-  // adalah hasil uraiannya. Sengaja tidak disimpan di localStorage: di
-  // komputer lab bersama, NIM mahasiswa sebelumnya tidak boleh terisi sendiri.
+  // Ikut setiap pertanyaan dan dicatat API bersamanya (`messages.meta`).
+  // Sengaja tidak disimpan di localStorage: di komputer lab bersama, NIM
+  // mahasiswa sebelumnya tidak boleh terisi sendiri -- pertanyaan orang
+  // berikutnya akan tercatat atas NIM itu.
   const [nim, setNim] = useState("")
   const hasilNim = uraiNim(nim, programs)
+  const nimSah = hasilNim.status === "sah"
   // Pertanyaan siap klik per topik, kuncinya nama unit.
   // Kunci yang belum ada = masih dimuat.
   const [faq, setFaq] = useState<Record<string, string[]>>({})
   const faqDiminta = useRef(new Set<string>())
   const { entries, busy, send, cancel, feedback, unit, chooseTopic } = useChat(
     embedKey,
-    hasilNim.status === "sah" ? hasilNim.profil : null
+    hasilNim.status === "sah" ? hasilNim.nim : null
   )
   const bannerEskalasi = bannerEskalasiTerakhir(entries)
   const listRef = useRef<HTMLDivElement>(null)
@@ -94,30 +97,36 @@ export function ChatPanel({
 
   const adaTopik = units !== null && units.length > 0
   const jumlahPilihan = entries.filter((entry) => entry.role === "topic").length
-  const bolehMengetik = jumlahPilihan > 0 || (units !== null && units.length === 0)
+  const bolehMengetik = nimSah && (jumlahPilihan > 0 || (units !== null && units.length === 0))
   const sudahMemilih = adaTopik && jumlahPilihan > 0
+  // NIM yang diubah jadi tidak sah setelah topik dipilih menyembunyikan kotak
+  // pertanyaan; menunya tetap terbuka, karena di situlah satu-satunya isian NIM.
+  const menuTampil = menuTerbuka || !nimSah
 
   // Satu menu saja, pindah tempat: di sapaan selagi belum ada topik, dan di
   // dasar percakapan saat dibuka lagi -- di sana ia terlihat tanpa menggulir
   // balik ke atas, tepat di atas kotak pertanyaan.
   // NIM ikut pindah bersama ubinnya: dibuka lagi lewat "Ganti topik", di
-  // situlah NIM yang salah ketik diperbaiki.
-  const menu = adaTopik ? (
-    <>
-      {programs.length > 0 && (
+  // situlah NIM yang salah ketik diperbaiki. Tanpa daftar unit, isian NIM
+  // tampil sendiri.
+  const menu =
+    units !== null ? (
+      <>
         <NimField id={`${PANEL_ID}-nim`} value={nim} onChange={setNim} hasil={hasilNim} />
-      )}
-      <TopicMenu
-        id={`${PANEL_ID}-topik`}
-        units={units}
-        active={sudahMemilih ? unit : undefined}
-        onPick={(pilihan) => {
-          setMenuTerbuka(false)
-          chooseTopic(pilihan)
-        }}
-      />
-    </>
-  ) : null
+        {adaTopik && (
+          <TopicMenu
+            id={`${PANEL_ID}-topik`}
+            units={units}
+            active={sudahMemilih ? unit : undefined}
+            disabled={!nimSah}
+            onPick={(pilihan) => {
+              setMenuTerbuka(false)
+              chooseTopic(pilihan)
+            }}
+          />
+        )}
+      </>
+    ) : null
 
   useEffect(() => {
     if (!open || units !== null) return
@@ -159,12 +168,17 @@ export function ChatPanel({
   }, [entries])
 
   // Fokus ke tempat mahasiswa harus bertindak berikutnya: kotak pertanyaan
-  // bila sudah ada, ubin topik pertama bila belum. Juga setiap kali topik
-  // dipilih, karena kotaknya baru muncul setelah itu.
+  // bila sudah ada, ubin topik pertama bila belum, isian NIM bila ubinnya
+  // masih nonaktif. Juga setiap kali topik dipilih, karena kotaknya baru
+  // muncul setelah itu.
   useEffect(() => {
     if (!open) return
     if (inputRef.current) inputRef.current.focus()
-    else document.querySelector<HTMLButtonElement>(`#${PANEL_ID}-topik button`)?.focus()
+    else
+      (
+        document.querySelector<HTMLButtonElement>(`#${PANEL_ID}-topik button:enabled`) ??
+        document.getElementById(`${PANEL_ID}-nim`)
+      )?.focus()
   }, [open, units, jumlahPilihan])
 
   // Kotak pertanyaan setinggi isinya, tumbuh ke atas karena ia menempel di
@@ -232,8 +246,8 @@ export function ChatPanel({
         <BotBubble>
           <strong className={styles.greeting}>Hai, Civitas INSTIKI!</strong>
           {adaTopik
-            ? "Apa yang ingin Anda tanyakan?\nPilih topik di bawah ini."
-            : "Apa yang ingin Anda tanyakan? Tulis pertanyaan Anda di bawah."}
+            ? "Apa yang ingin Anda tanyakan?\nIsi NIM Anda, lalu pilih topik di bawah ini."
+            : "Apa yang ingin Anda tanyakan?\nIsi NIM Anda, lalu tulis pertanyaan di bawah."}
         </BotBubble>
 
         {!sudahMemilih && menu}
@@ -252,7 +266,7 @@ export function ChatPanel({
                     questions && (
                       <FaqQuestions
                         questions={questions}
-                        disabled={busy}
+                        disabled={busy || !nimSah}
                         onAsk={(question) => void send(question, entry.unit)}
                       />
                     )
@@ -273,7 +287,7 @@ export function ChatPanel({
           )
         })}
 
-        {sudahMemilih && menuTerbuka && menu}
+        {sudahMemilih && menuTampil && menu}
       </div>
 
       <footer className={styles.footer}>
@@ -284,18 +298,19 @@ export function ChatPanel({
           <div className={styles.scopeBar}>
             <span className={styles.scopeName}>
               Topik: <strong>{unit}</strong>
-              {hasilNim.status === "sah" &&
-                ` · ${hasilNim.prodi.name} ${hasilNim.profil.intake_year}`}
+              {hasilNim.status === "sah" && ` · ${hasilNim.prodi.name} ${hasilNim.angkatan}`}
             </span>
             <button
               type="button"
-              className={cx(styles.scopeChange, menuTerbuka && styles.scopeChangeOpen)}
+              className={cx(styles.scopeChange, menuTampil && styles.scopeChangeOpen)}
               onClick={() => setMenuTerbuka((terbuka) => !terbuka)}
-              aria-expanded={menuTerbuka}
+              // Selama NIM belum sah menunya tidak boleh ditutup.
+              disabled={!nimSah}
+              aria-expanded={menuTampil}
               aria-controls={`${PANEL_ID}-topik`}
             >
-              {menuTerbuka ? <FaTimes aria-hidden /> : <FaExchangeAlt aria-hidden />}
-              {menuTerbuka ? "Tutup daftar" : "Ganti topik"}
+              {menuTampil ? <FaTimes aria-hidden /> : <FaExchangeAlt aria-hidden />}
+              {menuTampil ? "Tutup daftar" : "Ganti topik"}
             </button>
           </div>
         )}
@@ -355,7 +370,11 @@ export function ChatPanel({
           </form>
         ) : (
           <p className={styles.composerHint}>
-            {units === null ? "Memuat topik…" : "Pilih topik di atas untuk mulai bertanya."}
+            {units === null
+              ? "Memuat topik…"
+              : !nimSah
+                ? "Isi NIM Anda di atas untuk mulai bertanya."
+                : "Pilih topik di atas untuk mulai bertanya."}
           </p>
         )}
         {bolehMengetik && (

@@ -17,7 +17,6 @@ export type Suggestion = Schemas["Suggestion"]
 export type Unit = Schemas["UnitOut"]
 export type FaqQuestion = Schemas["FaqQuestion"]
 export type Program = Schemas["ProgramOut"]
-export type StudentProfile = Schemas["StudentProfileIn"]
 
 export type StreamedReply = {
   response: ChatResponse
@@ -118,8 +117,9 @@ export async function fetchUnits(signal?: AbortSignal): Promise<Unit[]> {
 }
 
 /**
- * Daftar prodi untuk mengurai NIM (`lib/nim.ts`). Gagal dimuat berarti isian NIM
- * tidak tampil dan jawaban tidak disesuaikan: profil penyempurna, bukan syarat.
+ * Daftar prodi untuk memeriksa NIM (`lib/nim.ts`) sebelum dikirim. Gagal dimuat
+ * berarti NIM belum dapat diperiksa, dan karena NIM wajib, kotak pertanyaan
+ * menunggu sampai daftar ini termuat.
  */
 export async function fetchPrograms(signal?: AbortSignal): Promise<Program[]> {
   try {
