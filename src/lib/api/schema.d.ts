@@ -1178,11 +1178,19 @@ export interface components {
             /**
              * @description `tanya_jawab` berarti tidak ada PDF yang bisa dibuka dan nomor
              *     halamannya tidak berarti apa-apa: tampilkan kartunya tanpa tautan
-             *     dan tanpa "hal. N".
+             *     dan tanpa "hal. N". `data` juga tanpa tautan dan halaman, tetapi
+             *     sumbernya data langsung dari layanan kampus lewat tool (mis.
+             *     `Data akademik SADS`), bukan entri tanya jawab admin.
              * @default pdf
              */
-            type: components["schemas"]["DocumentType"];
+            type: components["schemas"]["CitationType"];
         };
+        /**
+         * @description Jenis kartu sitasi: `DocumentType` ditambah `data` untuk hasil tool,
+         *     yang bukan baris di tabel `documents`.
+         * @enum {string}
+         */
+        CitationType: "pdf" | "tanya_jawab" | "data";
         /** @description Isi banner eskalasi FE-3. */
         ContactOut: {
             unit: string;

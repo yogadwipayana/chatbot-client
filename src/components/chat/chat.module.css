@@ -388,7 +388,8 @@
   border-color: var(--chat-line);
 }
 
-.qaIcon {
+.qaIcon,
+.dataIcon {
   flex: none;
   color: var(--blue);
 }

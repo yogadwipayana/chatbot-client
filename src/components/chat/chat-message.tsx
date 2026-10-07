@@ -2,6 +2,7 @@ import { Fragment, useState } from "react"
 import {
   FaChevronLeft,
   FaChevronRight,
+  FaDatabase,
   FaExclamationTriangle,
   FaExternalLinkAlt,
   FaFilePdf,
@@ -346,9 +347,21 @@ function kelompokkan(citations: Citation[]): CitationGroup[] {
  * Sumber PDF dibuka tepat di halaman yang dikutip. Sumber tanya jawab ditulis
  * admin langsung di dashboard dan tidak punya berkas: kartunya tetap tampil --
  * mahasiswa berhak tahu jawaban itu bersumber -- tetapi tanpa tautan yang
- * pasti buntu, dan tanpa nomor halaman yang tidak berarti apa-apa.
+ * pasti buntu, dan tanpa nomor halaman yang tidak berarti apa-apa. Data dari
+ * layanan kampus (tool, mis. "Data akademik SADS") tampil sama, tetapi tidak
+ * boleh berlabel "Tanya jawab resmi": bukan admin yang menulisnya (T44).
  */
 function CitationCard({ kelompok }: { kelompok: CitationGroup }) {
+  if (kelompok.type === "data") {
+    return (
+      <div className={cx(styles.citation, styles.citationStatic)}>
+        <FaDatabase className={styles.dataIcon} aria-hidden />
+        <span className={styles.citationTitle}>{kelompok.title}</span>
+        <span className={styles.citationPage}>Data langsung</span>
+      </div>
+    )
+  }
+
   if (kelompok.type === "tanya_jawab") {
     return (
       <div className={cx(styles.citation, styles.citationStatic)}>
