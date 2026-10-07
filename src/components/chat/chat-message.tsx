@@ -1,5 +1,7 @@
 import { Fragment, useState } from "react"
 import {
+  FaChevronLeft,
+  FaChevronRight,
   FaExclamationTriangle,
   FaExternalLinkAlt,
   FaFilePdf,
@@ -12,7 +14,7 @@ import {
   FaThumbsUp,
 } from "react-icons/fa"
 
-import { citationUrl, type Citation, type Contact } from "@/lib/api/chat"
+import { citationUrl, type Attachment, type Citation, type Contact } from "@/lib/api/chat"
 import { potongKontak } from "@/lib/kontak"
 import { cx } from "@/lib/utils"
 
@@ -145,6 +147,10 @@ export function AssistantMessage({
               ulang pertanyaan untuk jawaban lengkap.
             </p>
           )}
+          {complete &&
+            response.attachments.map((attachment, index) => (
+              <Lampiran key={index} attachment={attachment} />
+            ))}
           {complete && response.citations.length > 0 && <Citations citations={response.citations} />}
           {showEscalation && response.escalated && response.contacts.length > 0 && (
             <Escalation contacts={response.contacts} />
@@ -214,6 +220,65 @@ function TeksKontak({ text }: { text: string }) {
         )
       )}
     </>
+  )
+}
+
+/** Satu halaman lampiran. 220 nama sekaligus = gelembung setinggi 17 layar panel. */
+const BARIS_PER_HALAMAN = 10
+
+/**
+ * Daftar dari tool (mis. "Dosen bergelar Dr." dari SADS), tampil apa adanya di
+ * bawah jawaban, per 10 baris. Model hanya merangkumnya dan tidak menyalin
+ * daftar ini (api/docs/tool-call.md §10a), jadi yang dibaca mahasiswa adalah
+ * data SADS itu sendiri, bukan salinan model yang bisa melewatkan nama.
+ *
+ * Nomor berlanjut antarhalaman (11, 12, ...) supaya posisi di daftar tetap
+ * terbaca setelah berpindah halaman.
+ */
+function Lampiran({ attachment }: { attachment: Attachment }) {
+  const [halaman, setHalaman] = useState(0)
+  const total = attachment.items.length
+  const jumlahHalaman = Math.ceil(total / BARIS_PER_HALAMAN)
+  const awal = halaman * BARIS_PER_HALAMAN
+  const akhir = Math.min(awal + BARIS_PER_HALAMAN, total)
+
+  return (
+    <section className={styles.attachment} aria-label={attachment.title}>
+      <p className={styles.attachmentHead}>
+        <span className={styles.attachmentTitle}>{attachment.title}</span>
+        <span className={styles.attachmentSource}>{attachment.source}</span>
+      </p>
+      <ol className={styles.attachmentList} start={awal + 1}>
+        {attachment.items.slice(awal, akhir).map((item, index) => (
+          <li key={awal + index}>{item}</li>
+        ))}
+      </ol>
+      {jumlahHalaman > 1 && (
+        <div className={styles.pager}>
+          <button
+            type="button"
+            className={styles.pagerButton}
+            onClick={() => setHalaman(halaman - 1)}
+            disabled={halaman === 0}
+            aria-label="Halaman sebelumnya"
+          >
+            <FaChevronLeft aria-hidden />
+          </button>
+          <span aria-live="polite">
+            {awal + 1}–{akhir} dari {total}
+          </span>
+          <button
+            type="button"
+            className={styles.pagerButton}
+            onClick={() => setHalaman(halaman + 1)}
+            disabled={halaman === jumlahHalaman - 1}
+            aria-label="Halaman berikutnya"
+          >
+            <FaChevronRight aria-hidden />
+          </button>
+        </div>
+      )}
+    </section>
   )
 }
 

@@ -56,6 +56,7 @@ export interface paths {
          *     |---|---|---|
          *     | `status` | Segera, sebelum retrieval | `{"stage": "mencari dokumen"}` |
          *     | `status` | Setelah retrieval, sebelum token pertama | `{"stage": "menyusun jawaban"}` |
+         *     | `status` | Hanya jalur tool, selama data diambil lalu kembali ke tahap sebelumnya | `{"stage": "mengambil data akademik"}`, lalu `{"stage": "menyusun jawaban"}` |
          *     | `token` | Berkali-kali, selagi LLM menulis | `{"text": "<potongan jawaban>"}` |
          *     | `message` | Setelah pipeline selesai | Objek `ChatResponse` utuh |
          *     | `done` | Terakhir | `{}` |
@@ -68,13 +69,13 @@ export interface paths {
          *     `token` membawa potongan mentah jawaban, bukan jawaban yang bertambah
          *     panjang: klien merangkainya sendiri. Potongan hanya untuk ditampilkan
          *     selagi berjalan -- teks final yang sah adalah `text` pada `message`,
-         *     yang juga satu-satunya sumber sitasi dan `message_id`. Jalur yang tidak
+         *     yang juga satu-satunya sumber sitasi, lampiran, dan `message_id`. Jalur yang tidak
          *     memanggil LLM (penolakan FR-3, pertanyaan sensitif FR-7, sapaan) tidak
          *     mengirim `token` sama sekali dan langsung sampai ke `message`.
          *
          *     Klien harus menangani putusnya koneksi di tengah jalan: bila `done`
          *     tidak pernah tiba, perlakukan jawaban sebagai tidak lengkap dan jangan
-         *     tampilkan sitasinya.
+         *     tampilkan sitasi maupun lampirannya.
          */
         post: operations["chat_stream"];
         delete?: never;
@@ -1188,6 +1189,16 @@ export interface components {
             service_hours: string;
             contact: string;
         };
+        /**
+         * @description Satu daftar dari hasil tool, mis. "Dosen bergelar Dr." dari SADS.
+         *     Urutan `items` sudah final; klien hanya membaginya per halaman.
+         */
+        AttachmentOut: {
+            title: string;
+            /** @description Penanda sumber, sama dengan `title` kartu sitasinya (mis. `Data akademik SADS`). */
+            source: string;
+            items: string[];
+        };
         /** @description Satu pilihan di menu unit chatbot. */
         UnitOut: {
             /** @description Dikirim kembali apa adanya sebagai `unit` pada `POST /api/chat`. */
@@ -1245,6 +1256,17 @@ export interface components {
              * @default false
              */
             escalated: boolean;
+            /**
+             * @description Daftar data dari tool (mis. daftar dosen SADS) yang ditampilkan apa
+             *     adanya di bawah jawaban, per 10 baris. Model tidak menyalin daftar
+             *     ini ke `text`: jawabannya hanya merangkum (jumlah, jawaban singkat)
+             *     dan mengutip `source`.
+             *
+             *     Hanya untuk `answer`, dan hanya bila `source`-nya juga ada di
+             *     `citations`. Biasanya kosong.
+             * @default []
+             */
+            attachments: components["schemas"]["AttachmentOut"][];
             /**
              * @description Skor kemiripan mentah tertinggi, bukan skor RRF. Jangan ditampilkan
              *     ke mahasiswa -- angka ini untuk AD-6 dan kalibrasi ambang.
@@ -1615,6 +1637,8 @@ export interface components {
             /** @description Kontak yang akan dilihat mahasiswa untuk pertanyaan yang sama (FE-3, FE-4). */
             contacts: components["schemas"]["ContactOut"][];
             escalated: boolean;
+            /** @description Daftar dari tool yang akan dilihat mahasiswa di bawah jawaban (lihat `ChatResponse.attachments`). */
+            attachments: components["schemas"]["AttachmentOut"][];
             latency_ms: number;
             /** @description Akar trace LangSmith untuk uji coba ini -- mencakup penulisan ulang query, retrieval, dan penyusunan jawaban sekaligus. Null bila tracing mati (LANGSMITH_TRACING=false atau LANGSMITH_API_KEY kosong). */
             langsmith_run_id?: string | null;
@@ -2310,7 +2334,7 @@ export interface operations {
                      *     data: {"text": " 1-7 Agustus 2025"}
                      *
                      *     event: message
-                     *     data: {"kind": "answer", "text": "Pengisian KRS dibuka 1-7 Agustus 2025 [Panduan Akademik 2025, hal. 12].", "citations": [{"title": "Panduan Akademik 2025", "page": 12, "document_id": "3f1a...", "file_path": "storage/documents/3f1a....pdf"}], "contacts": [], "escalated": false, "top_score": 0.82}
+                     *     data: {"kind": "answer", "text": "Pengisian KRS dibuka 1-7 Agustus 2025 [Panduan Akademik 2025, hal. 12].", "citations": [{"title": "Panduan Akademik 2025", "page": 12, "document_id": "3f1a...", "file_path": "storage/documents/3f1a....pdf"}], "contacts": [], "escalated": false, "attachments": [], "top_score": 0.82}
                      *
                      *     event: done
                      *     data: {}

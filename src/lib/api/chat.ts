@@ -11,6 +11,7 @@ import { readServerEvents } from "./sse"
 export type ChatRequest = Schemas["ChatRequest"]
 export type ChatResponse = Schemas["ChatResponse"]
 export type Citation = Schemas["CitationOut"]
+export type Attachment = Schemas["AttachmentOut"]
 export type Contact = Schemas["ContactOut"]
 export type Turn = Schemas["TurnIn"]
 export type Suggestion = Schemas["Suggestion"]
