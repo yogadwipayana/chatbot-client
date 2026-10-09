@@ -223,6 +223,18 @@
   font-size: 0.9em;
 }
 
+.answerLink {
+  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
+}
+
+.answerLink:hover,
+.answerLink:focus-visible {
+  color: var(--red);
+}
+
 .msgUser .text {
   --bubble-bg: var(--red);
   --bubble-border: var(--red);
