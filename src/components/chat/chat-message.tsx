@@ -167,13 +167,14 @@ export function AssistantMessage({
 
 /** Tebal `**...**` atau kode sebaris `` `...` ``, mana yang lebih dulu muncul. */
 const PENANDA_MARKDOWN = /(\*\*[\s\S]+?\*\*|`[^`\n]+`)/g
+const URL_HTTP = /https?:\/\/[^\s<>"'`]+/gi
 
 /**
  * Model kadang menulis penekanan Markdown: tebal (`**3 Agustus 2026**`) dan
  * kode sebaris (`` `TRANSFER NomorVA NOMINAL` `` -- format SMS, kode bank).
- * Hanya dua itu yang diterjemahkan; sisanya -- termasuk penanda sitasi
- * `[Judul, hal. 12]` -- ditampilkan apa adanya. Admin memakai salinan yang
- * sama (`RichText` di `admin/src/components/common.tsx`).
+ * URL HTTP(S) juga ditautkan otomatis; penanda sitasi `[Judul, hal. 12]`
+ * ditampilkan apa adanya. Admin memakai salinan yang sama (`RichText` di
+ * `admin/src/components/common.tsx`).
  *
  * `tautKontak`: nomor telepon dijadikan tautan. Hanya untuk teks yang disusun
  * server dari daftar kontak (penolakan, dukungan), bukan jawaban LLM.
@@ -184,11 +185,7 @@ function RichText({ text, tautKontak = false }: { text: string; tautKontak?: boo
     <>
       {bagian.map((teks, index) =>
         index % 2 === 0 ? (
-          tautKontak ? (
-            <TeksKontak key={index} text={teks} />
-          ) : (
-            teks
-          )
+          <TeksJawaban key={index} text={teks} tautKontak={tautKontak} />
         ) : teks.startsWith("`") ? (
           <code key={index} className={styles.code}>
             {teks.slice(1, -1)}
@@ -201,6 +198,64 @@ function RichText({ text, tautKontak = false }: { text: string; tautKontak?: boo
       )}
     </>
   )
+}
+
+/** Teks jawaban dengan URL HTTP(S) yang dapat dibuka langsung. */
+function TeksJawaban({ text, tautKontak }: { text: string; tautKontak: boolean }) {
+  const bagian: React.ReactNode[] = []
+  let awal = 0
+
+  for (const cocok of text.matchAll(URL_HTTP)) {
+    const posisi = cocok.index
+    let akhir = cocok[0].length
+
+    while (/[.,!?;:]$/.test(cocok[0].slice(0, akhir))) akhir -= 1
+    while (akhir > 0 && /[)\]}]/.test(cocok[0][akhir - 1])) {
+      const penutup = cocok[0][akhir - 1]
+      const pembuka = penutup === ")" ? "(" : penutup === "]" ? "[" : "{"
+      const url = cocok[0].slice(0, akhir)
+      if ([...url].filter((char) => char === penutup).length <= [...url].filter((char) => char === pembuka).length) {
+        break
+      }
+      akhir -= 1
+    }
+
+    const url = cocok[0].slice(0, akhir)
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue
+    } catch {
+      continue
+    }
+
+    if (posisi > awal) {
+      const biasa = text.slice(awal, posisi)
+      bagian.push(
+        tautKontak ? <TeksKontak key={awal} text={biasa} /> : <Fragment key={awal}>{biasa}</Fragment>
+      )
+    }
+    bagian.push(
+      <a
+        key={posisi}
+        className={styles.answerLink}
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {url}
+      </a>
+    )
+    awal = posisi + url.length
+  }
+
+  if (awal < text.length) {
+    const biasa = text.slice(awal)
+    bagian.push(
+      tautKontak ? <TeksKontak key={awal} text={biasa} /> : <Fragment key={awal}>{biasa}</Fragment>
+    )
+  }
+
+  return <>{bagian}</>
 }
 
 /** Teks kontak dengan nomor telepon/WhatsApp yang dapat diketuk (`potongKontak`). */
