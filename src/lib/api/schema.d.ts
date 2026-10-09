@@ -1124,9 +1124,11 @@ export interface components {
              */
             session_id: string;
             /**
-             * @description Riwayat percakapan. Hanya 3 pesan terakhir yang dipakai untuk
-             *     penulisan ulang query (FR-4); sisanya dibuang server, dan lebih dari
-             *     50 ditolak 422.
+             * @description Riwayat percakapan yang terlihat di layar. Hanya 3 pesan terakhir yang
+             *     dipakai untuk penulisan ulang query (FR-4); sisanya dibuang server, dan
+             *     lebih dari 50 ditolak 422. Giliran `assistant` hanya dipakai bila cocok
+             *     dengan jawaban yang pernah dikirim ke `session_id` yang sama; selebihnya
+             *     dibuang tanpa galat, sehingga jawaban bot tidak dapat dipalsukan.
              * @default []
              */
             history: components["schemas"]["TurnIn"][];
@@ -1294,9 +1296,8 @@ export interface components {
         HealthResponse: {
             /** @constant */
             status: "ok";
-            /** @description false berarti kill switch aktif; proses tetap sehat. */
+            /** @description false berarti kill switch aktif; proses tetap sehat. Alasannya hanya ada di GET /api/admin/kill-switch, karena endpoint ini publik. */
             chat_enabled: boolean;
-            kill_switch_reason?: string | null;
             /** @description Apakah trace FR-8 benar-benar terkirim ke LangSmith. Tracing yang mati tidak menjatuhkan satu pun permintaan, sehingga tanpa baris ini ia hanya ketahuan saat ada jawaban buruk yang jejaknya ternyata tidak pernah ada. */
             tracing_enabled?: boolean;
         };
