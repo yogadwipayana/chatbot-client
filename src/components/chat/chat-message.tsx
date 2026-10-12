@@ -492,7 +492,7 @@ function Escalation({ contacts }: { contacts: Contact[] }) {
         {contacts.map((contact) => (
           <li key={contact.unit}>
             <strong>{contact.unit}</strong>
-            <span>{contact.service_hours}</span>
+            {contact.service_hours && <span>{contact.service_hours}</span>}
             <span>
               {isEmail(contact.contact) ? (
                 <a href={`mailto:${contact.contact}`}>{contact.contact}</a>

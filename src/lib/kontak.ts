@@ -22,7 +22,7 @@ export type PotonganKontak = {
 /**
  * Nomor Indonesia berawalan 0 atau +62, dengan kode area yang boleh diapit
  * kurung dan kelompok angka yang dipisah spasi, titik, atau tanda hubung:
- * "(0361) 256995", "0813-3896-9832", "+62 813 3896 9832".
+ * "(0361) 256995", "0813-3982-2383", "+62 813-3982-2383".
  *
  * Awalan 0 dengan minimal dua digit sesudahnya sengaja wajib, supaya jam
  * ("08.00-22.00") dan tanggal tidak ikut terbaca sebagai nomor.

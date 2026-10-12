@@ -1196,6 +1196,7 @@ export interface components {
         /** @description Isi banner eskalasi FE-3. */
         ContactOut: {
             unit: string;
+            /** @description Kosong bila jam layanan belum ditetapkan (kontak PIC per unit); lewati barisnya. */
             service_hours: string;
             contact: string;
         };
@@ -2165,7 +2166,7 @@ export interface components {
             content: {
                 /**
                  * @example {
-                 *       "detail": "Layanan chat sedang dinonaktifkan sementara. Silakan hubungi Front Office INSTIKI: Telepon (0361) 256995 / WhatsApp 0813-3896-9832."
+                 *       "detail": "Layanan chat sedang dinonaktifkan sementara. Silakan hubungi Front Office INSTIKI: Telepon (0361) 256995 / WhatsApp +62 813-3982-2383."
                  *     }
                  */
                 "application/json": components["schemas"]["Error"];
