@@ -12,6 +12,12 @@ const headerKeamanan = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // H24: setelah kunjungan pertama lewat HTTPS, peramban hanya memakai HTTPS ke
+  // portal. Diabaikan bila diterima lewat HTTP, jadi akses LAN `http://` dan
+  // `next dev` tidak terpengaruh. Tanpa `preload`: itu komitmen domain permanen.
+  ...(process.env.NODE_ENV === "production"
+    ? [{ key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" }]
+    : []),
 ];
 
 // Situs yang boleh memuat `/embed` di dalam iframe tidak lagi diatur di sini,

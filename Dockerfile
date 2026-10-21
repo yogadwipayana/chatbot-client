@@ -5,12 +5,14 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # --- Dependensi lengkap untuk build ------------------------------------------
 FROM base AS deps
 COPY package.json package-lock.json ./
-RUN npm ci
+# --ignore-scripts (H25): skrip lifecycle paket tidak dijalankan saat build,
+# sama seperti .npmrc untuk instalasi lokal.
+RUN npm ci --ignore-scripts
 
 # --- Dependensi produksi saja untuk runtime ----------------------------------
 FROM base AS prod-deps
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --ignore-scripts
 
 # --- Build --------------------------------------------------------------------
 FROM base AS builder
