@@ -29,6 +29,10 @@ export function MainHeader({ onToggleSidebar }: { onToggleSidebar: () => void })
           <a href="#" className={styles.link}>
             Setting
           </a>
+          {/* Seperti SADS: halaman login sendiri yang menghapus data login. */}
+          <Link href="/masuk" className={styles.link}>
+            Sign out
+          </Link>
         </div>
       </nav>
     </header>

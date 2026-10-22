@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { FaComments, FaTimes } from "react-icons/fa"
 
+import { nimLoginSads } from "@/lib/sads"
+
 import styles from "./chat.module.css"
 import { ChatPanel, PANEL_ID } from "./chat-panel"
 
@@ -13,15 +15,28 @@ import { ChatPanel, PANEL_ID } from "./chat-panel"
  */
 export function ChatWidget() {
   const [open, setOpen] = useState(false)
+  const [nimSads, setNimSads] = useState<string | null>(null)
+
+  function toggle() {
+    // Dibaca saat panel dibuka, bukan saat halaman dimuat: data login SADS
+    // (di portal ini tiruannya) sudah pasti tertulis pada saat itu.
+    if (!open) setNimSads(nimLoginSads())
+    setOpen(!open)
+  }
 
   return (
     <>
-      <ChatPanel open={open} onClose={() => setOpen(false)} className={styles.panel} />
+      <ChatPanel
+        open={open}
+        onClose={() => setOpen(false)}
+        className={styles.panel}
+        nimSads={nimSads}
+      />
 
       <button
         type="button"
         className={styles.launcher}
-        onClick={() => setOpen((value) => !value)}
+        onClick={toggle}
         aria-expanded={open}
         aria-controls={PANEL_ID}
       >

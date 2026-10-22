@@ -1,0 +1,120 @@
+/*
+ * Meniru halaman login SADS: AdminLTE 2 `.login-page` dengan latar foto kampus
+ * yang digelapkan. Fotonya tidak disalin; gradien gelap ini mengikuti warnanya
+ * supaya logo putih bertepi bayangan tetap terbaca.
+ */
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 8% 16px 40px;
+  background: linear-gradient(180deg, #213a39 0%, #2c3b3d 55%, #1c2021 100%);
+}
+
+.box {
+  width: 360px;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.logo {
+  margin-bottom: 25px;
+  font-size: 35px;
+  font-weight: 300;
+  line-height: 1.1;
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 5px 5px #000;
+}
+
+.logo b {
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 20px 0 10px;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.body {
+  padding: 20px;
+  background: #fff;
+  color: #666;
+}
+
+.message {
+  margin: 0;
+  padding: 0 20px 20px;
+  text-align: center;
+}
+
+.group {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.input {
+  display: block;
+  width: 100%;
+  height: 34px;
+  padding: 6px 34px 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: #fff;
+  color: #555;
+  font-size: 14px;
+  box-shadow: none;
+}
+
+.input:focus {
+  border-color: var(--blue);
+  outline: 0;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--red);
+}
+
+.icon {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 14px;
+  height: 14px;
+  color: #777;
+  pointer-events: none;
+}
+
+.error {
+  margin: -5px 0 15px;
+  color: var(--red);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.button {
+  width: calc(100% / 3);
+  min-width: 96px;
+  padding: 6px 12px;
+  border: 1px solid #367fa9;
+  border-radius: 0;
+  background: var(--blue);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.42857143;
+}
+
+.button:hover {
+  background: #367fa9;
+}
+
+.hint {
+  margin: 15px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}

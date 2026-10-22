@@ -15,6 +15,7 @@ import {
 import { student } from "@/lib/portal-data"
 import { cx } from "@/lib/utils"
 
+import { NimLogin } from "./login-sads"
 import styles from "./main-sidebar.module.css"
 
 type NavItem = {
@@ -48,7 +49,9 @@ export function MainSidebar({ className }: { className?: string }) {
         {/* Ganti public/logo.svg dengan logo kampus. */}
         <Image src="/logo.svg" alt="Logo kampus" width={45} height={45} unoptimized />
         <div className={styles.userInfo}>
-          <p className={styles.nim}>{student.nim}</p>
+          <p className={styles.nim}>
+            <NimLogin />
+          </p>
           <p className={styles.period}>
             <FaCalendarAlt aria-hidden /> {student.periode}
           </p>

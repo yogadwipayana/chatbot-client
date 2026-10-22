@@ -1,11 +1,13 @@
+import { NimLogin } from "@/components/layout/login-sads"
 import { Box } from "@/components/ui/box"
 import type { Student } from "@/lib/portal-data"
 
 import styles from "./student-summary.module.css"
 
+/** NIM dari Sign In tiruan; sisanya tetap data contoh `student`. */
 export function StudentSummary({ student }: { student: Student }) {
-  const profil: Array<[string, string]> = [
-    ["NIM", student.nim],
+  const profil: Array<[string, React.ReactNode]> = [
+    ["NIM", <NimLogin key="nim" />],
     ["Nama", student.nama],
     ["Fakultas", student.fakultas],
     ["Jurusan", student.jurusan],

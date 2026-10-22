@@ -13,6 +13,10 @@
  * yang diperiksa portal (src/proxy.ts) setiap kali panel dibuka. Situs di luar
  * daftar itu tetap mendapat tombolnya, tetapi peramban menolak panelnya.
  *
+ * Di SADS, NIM mahasiswa yang sedang masuk dibaca dari localStorage halaman
+ * (`kojindeta`, ditulis SADS sendiri) dan diteruskan ke panel, supaya tidak
+ * perlu diketik lagi. Hanya dibaca, dan hanya NIM yang dikirim.
+ *
  * Disajikan apa adanya dari public/, tanpa build step. Berkas ini berjalan di
  * halaman milik orang lain: jangan sentuh apa pun di luar elemennya sendiri.
  */
@@ -40,6 +44,8 @@
   // Harus sama dengan src/components/chat/embedded-chat.tsx.
   const PESAN_BUKA = "asisten:buka"
   const PESAN_TUTUP = "asisten:tutup"
+  const PESAN_SIAP = "asisten:siap"
+  const PESAN_IDENTITAS = "asisten:identitas"
 
   // Ikon FaComments dan FaTimes (react-icons), sama dengan tombol di portal.
   const IKON_BUKA = svg(
@@ -214,12 +220,37 @@
 
   window.addEventListener("message", (event) => {
     if (!iframe || event.source !== iframe.contentWindow || event.origin !== ASAL) return
-    if (event.data && event.data.type === PESAN_TUTUP) setOpen(false, true)
+    const type = event.data && event.data.type
+    if (type === PESAN_TUTUP) setOpen(false, true)
+    // Panel baru bisa menerima pesan setelah ia sendiri berkata siap; pesan
+    // yang dikirim saat iframe masih dimuat dibuang peramban.
+    else if (type === PESAN_SIAP) {
+      iframe.contentWindow.postMessage({ type: PESAN_IDENTITAS, nim: nimSads() }, ASAL)
+    }
   })
 
   render()
   if (document.body) document.body.append(host)
   else document.addEventListener("DOMContentLoaded", () => document.body.append(host))
+
+  /**
+   * NIM mahasiswa yang sedang masuk SADS, dari data login yang ditulis SADS di
+   * localStorage (`kojindeta`, field `id1`). null di situs lain, sebelum masuk,
+   * dan untuk akun dosen/staf (`role` selain 1), yang `id1`-nya bukan NIM.
+   * Harus sama dengan bacaLoginSads di src/lib/sads.ts.
+   */
+  function nimSads() {
+    try {
+      const data = JSON.parse(localStorage.getItem("kojindeta") || "null")
+      if (!data || typeof data !== "object") return null
+      if (data.role !== undefined && Number(data.role) !== 1) return null
+      const nim = typeof data.id1 === "number" ? String(data.id1) : String(data.id1 || "").trim()
+      return /^\d{10}$/.test(nim) ? nim : null
+    } catch {
+      // Isinya bukan JSON, atau localStorage diblokir: NIM diketik seperti biasa.
+      return null
+    }
+  }
 
   function svg(viewBox, d) {
     return `<svg viewBox="${viewBox}" aria-hidden="true" focusable="false"><path d="${d}"></path></svg>`

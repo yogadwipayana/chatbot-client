@@ -136,6 +136,8 @@ sequenceDiagram
     X->>A: GET /api/embed/keys/emb_…
     A-->>X: allowed_origins (atau 404)
     X-->>P: halaman + CSP frame-ancestors
+    P->>E: postMessage asisten:siap
+    E-->>P: postMessage asisten:identitas {nim dari localStorage kojindeta, atau null}
     P->>A: POST /api/chat/stream + X-Embed-Key (Origin: domain portal)
     A-->>P: SSE: status, token, message, done
     P-->>E: postMessage asisten:tutup (tombol ✕ / Escape)
@@ -166,19 +168,40 @@ sequenceDiagram
   memisahkan penyimpanan iframe per situs induk, jadi pengunjung yang sama di
   dua situs penyemat dan di portal tercatat sebagai tiga sesi. Bila
   `localStorage` diblokir, sesi berlaku per tab (`lib/session.ts`).
-- **Pesan antara `embed.js` dan iframe hanya sinyal buka/tutup.** Isi
-  percakapan tidak pernah keluar dari iframe.
+- **Pesan antara `embed.js` dan iframe hanya sinyal buka/tutup, plus NIM dari
+  login SADS.** Isi percakapan tidak pernah keluar dari iframe.
 
   | Pesan | Arah | Arti |
   |---|---|---|
   | `{type: "asisten:buka"}` | situs → iframe | Panel ditampilkan lagi; fokus kembali ke kotak pertanyaan |
   | `{type: "asisten:tutup"}` | situs → iframe | Ditutup lewat tombol peluncur di situs |
   | `{type: "asisten:tutup"}` | iframe → situs | Ditutup lewat ✕ atau Escape di panel; situs menyembunyikan iframe dan mengembalikan fokus ke tombol |
+  | `{type: "asisten:siap"}` | iframe → situs | Panel sudah bisa menerima pesan; minta NIM login SADS |
+  | `{type: "asisten:identitas", nim}` | situs → iframe | Balasan `asisten:siap`: NIM mahasiswa yang sedang masuk SADS, atau `null` |
 
   `embed.js` hanya menerima pesan yang `origin`-nya domain portal **dan**
   `source`-nya iframe miliknya sendiri. Iframe hanya menerima pesan dari
   `window.parent`. Nama pesan harus sama di `public/embed.js` dan
   `src/components/chat/embedded-chat.tsx`.
+- **NIM terisi sendiri di SADS.** Setelah Sign In berhasil, SADS menulis
+  `kojindeta` ke `localStorage`-nya; halaman Sign In menjalankan
+  `localStorage.clear()` setiap kali dibuka, dan begitulah SADS keluar.
+  Iframe beda asal tidak bisa membacanya, jadi `embed.js` yang membaca `id1`
+  (NIM) lalu mengirimnya sebagai `asisten:identitas`. Hanya NIM yang dikirim;
+  `nama`, `jur`, token, dan isi lainnya tidak pernah meninggalkan halaman SADS.
+  Akun dengan `role` selain 1 (dosen/staf) dan nilai yang bukan 10 angka
+  dianggap tidak ada. NIM itu hanya mengisi isian NIM yang masih kosong:
+  mahasiswa tetap dapat mengubahnya, dan API memperlakukannya sama dengan NIM
+  yang diketik. Di situs lain kuncinya tidak ada, jadi NIM tetap diketik.
+  Pembacanya ada dua dan harus sejalan: `nimSads` di `embed.js` dan
+  `bacaLoginSads` di `src/lib/sads.ts`.
+- **Portal meniru Sign In SADS di `/masuk`.** Halaman portal (`/`) hanya
+  terbuka setelah Sign In; tanpa `kojindeta` pengunjung dialihkan ke sana.
+  NIM wajib 10 angka, password boleh kosong dan tidak dibaca. Yang ditulis
+  hanya `id1` (NIM itu), `nama`, dan `jur` -- dua yang terakhir dari mahasiswa
+  contoh. "Sign out" di header membuka `/masuk`, yang menghapus `kojindeta`
+  (hanya kunci itu: sesi chat portal disimpan di asal yang sama). `/embed`
+  tidak ikut digerbangi.
 - **Domain portal dibaca dari `src` script itu sendiri** (`document.currentScript`),
   jadi `embed.js` tidak menyimpan alamat apa pun dan berkas yang sama berlaku
   di dev, staging, dan produksi.
@@ -251,6 +274,14 @@ memasang baris `<script>` dari `?key=` itu; alamat portal di `index.html` dituli
   http/https. Halaman contoh menampilkan peringatan bila dibuka begitu.
 - Halaman contoh juga memperingatkan bila `?key=` belum diberikan, atau bila
   portal belum berjalan ("embed.js tidak termuat").
+- **Meniru mahasiswa yang sudah masuk SADS:** jalankan di konsol halaman
+  contoh, lalu muat ulang dan buka panelnya. Isian NIM langsung terisi.
+
+  ```js
+  localStorage.setItem("kojindeta", JSON.stringify({ id1: "2401010101", nama: "Yoga", jur: "IF-MTI" }))
+  // kembali seperti situs biasa: localStorage.removeItem("kojindeta")
+  ```
+
 - Setiap pertanyaan yang dikirim tercatat di tabel `conversations` database
   yang dipakai API, beserta kuncinya. Bersihkan percakapan uji dari DB dev bila
   perlu.
@@ -298,7 +329,10 @@ di dalam iframe, ganti konteks `top` di tab Console ke frame `/embed`.
 
 | Berkas | Isi |
 |---|---|
-| [`public/embed.js`](../public/embed.js) | Skrip sematan: tombol, iframe, pesan buka/tutup |
+| [`public/embed.js`](../public/embed.js) | Skrip sematan: tombol, iframe, pesan buka/tutup, NIM dari login SADS |
+| [`src/lib/sads.ts`](../src/lib/sads.ts) | Membaca NIM dari `kojindeta`; dipakai widget portal dan iframe |
+| [`src/components/login/login-form.tsx`](../src/components/login/login-form.tsx) | Tiruan Sign In SADS di `/masuk` (NIM wajib, password boleh kosong) |
+| [`src/components/layout/login-sads.tsx`](../src/components/layout/login-sads.tsx) | Gerbang login halaman portal; NIM yang sedang masuk |
 | [`src/proxy.ts`](../src/proxy.ts) | Pemeriksaan kunci dan header `frame-ancestors` seluruh portal |
 | [`src/app/embed/page.tsx`](../src/app/embed/page.tsx) | Halaman `/embed` |
 | [`src/components/chat/embedded-chat.tsx`](../src/components/chat/embedded-chat.tsx) | Mode widget vs. halaman penuh; halaman "tidak tersedia"; penerima pesan dari `embed.js` |

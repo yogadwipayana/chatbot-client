@@ -3,17 +3,23 @@
 import { useEffect, useState } from "react"
 import { FaRobot } from "react-icons/fa"
 
+import { bentukNim } from "@/lib/sads"
+
 import styles from "./chat.module.css"
 import { BotBubble } from "./chat-message"
 import { ChatPanel } from "./chat-panel"
 
 /**
  * Pesan antara halaman ini dan `public/embed.js` di situs penyemat. Namanya
- * harus sama di kedua sisi. Isinya hanya sinyal buka/tutup: percakapan
- * mahasiswa tidak pernah keluar dari iframe.
+ * harus sama di kedua sisi. Isinya sinyal buka/tutup, ditambah NIM dari login
+ * SADS yang masuk ke iframe: percakapan mahasiswa tidak pernah keluar darinya.
  */
 const PESAN_BUKA = "asisten:buka"
 const PESAN_TUTUP = "asisten:tutup"
+/** iframe → situs: panel siap menerima `PESAN_IDENTITAS`. */
+const PESAN_SIAP = "asisten:siap"
+/** situs → iframe: `{nim}` mahasiswa yang sedang masuk SADS, atau null. */
+const PESAN_IDENTITAS = "asisten:identitas"
 
 /**
  * Isi halaman `/embed`.
@@ -29,18 +35,27 @@ const PESAN_TUTUP = "asisten:tutup"
 export function EmbeddedChat({ widget, embedKey }: { widget: boolean; embedKey?: string }) {
   // Iframe baru dibuat saat tombolnya pertama kali ditekan, jadi mulai terbuka.
   const [open, setOpen] = useState(true)
+  const [nimSads, setNimSads] = useState<string | null>(null)
 
   useEffect(() => {
     if (!widget) return
     function onMessage(event: MessageEvent) {
       if (event.source !== window.parent) return
-      const type = (event.data as { type?: unknown } | null)?.type
+      const data = event.data as { type?: unknown; nim?: unknown } | null
+      const type = data?.type
       // Ditutup lalu dibuka lagi lewat tombol di situs penyemat: kembalikan
       // fokus ke kotak pertanyaan, seperti saat pertama dibuka.
       if (type === PESAN_BUKA) setOpen(true)
       else if (type === PESAN_TUTUP) setOpen(false)
+      // Situs mana pun yang terdaftar untuk kunci ini bisa mengirimnya, jadi
+      // nilainya diperlakukan sama dengan NIM yang diketik: diperiksa `uraiNim`.
+      else if (type === PESAN_IDENTITAS) setNimSads(bentukNim(data?.nim))
     }
     window.addEventListener("message", onMessage)
+    // Baru sekarang pesan balasannya dapat diterima. Data login SADS ada di
+    // localStorage halaman induk, yang beda asal: hanya `embed.js` yang bisa
+    // membacanya. "*" aman, pesan ini tidak membawa apa-apa.
+    window.parent.postMessage({ type: PESAN_SIAP }, "*")
     return () => window.removeEventListener("message", onMessage)
   }, [widget])
 
@@ -57,6 +72,7 @@ export function EmbeddedChat({ widget, embedKey }: { widget: boolean; embedKey?:
       onClose={widget ? close : undefined}
       className={styles.embedded}
       embedKey={embedKey}
+      nimSads={nimSads}
     />
   )
 }

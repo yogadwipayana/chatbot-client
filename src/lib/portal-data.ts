@@ -3,7 +3,9 @@
  *
  * API chatbot sengaja tidak menyimpan identitas mahasiswa (PRD §11), jadi
  * ringkasan studi di bawah hanya pengisi tampilan sampai portal ini terhubung ke
- * sistem akademik yang sebenarnya. Jangan pernah meneruskan isinya ke API chat.
+ * sistem akademik yang sebenarnya. Yang sampai ke API chat hanya `nim`, lewat
+ * tiruan login SADS (`lib/sads.ts`) yang mengisi isian NIM widget -- sama
+ * dengan NIM yang diketik mahasiswa. Sisanya jangan pernah diteruskan ke API.
  */
 
 export type Student = {

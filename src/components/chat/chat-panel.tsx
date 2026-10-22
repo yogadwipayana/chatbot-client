@@ -50,6 +50,7 @@ export function ChatPanel({
   onClose,
   className,
   embedKey,
+  nimSads = null,
 }: {
   open: boolean
   /** Tanpa ini tidak ada tombol tutup -- `/embed` yang dibuka sebagai halaman penuh. */
@@ -57,6 +58,12 @@ export function ChatPanel({
   className: string
   /** Kunci situs penyemat; hanya diisi panel `/embed` yang dimuat situs lain. */
   embedKey?: string
+  /**
+   * NIM mahasiswa yang sedang masuk SADS (`lib/sads.ts`), dari widget portal
+   * atau dari `embed.js` di halaman SADS. Mengisi isian NIM selama masih
+   * kosong; isiannya tetap bisa diubah.
+   */
+  nimSads?: string | null
 }) {
   const [draft, setDraft] = useState("")
   // Menu topik dibuka lagi lewat tombol "Ganti topik". Sembilan ubin yang
@@ -77,10 +84,20 @@ export function ChatPanel({
   // kegagalan yang baru saja terjadi.
   const prodiPerluDicobaLagi = useRef(false)
   // Ikut setiap pertanyaan dan dicatat API bersamanya (`messages.meta`).
-  // Sengaja tidak disimpan di localStorage: di komputer lab bersama, NIM
-  // mahasiswa sebelumnya tidak boleh terisi sendiri -- pertanyaan orang
-  // berikutnya akan tercatat atas NIM itu.
+  // Sengaja tidak disimpan asisten di localStorage: di komputer lab bersama,
+  // NIM mahasiswa sebelumnya tidak boleh terisi sendiri -- pertanyaan orang
+  // berikutnya akan tercatat atas NIM itu. Yang boleh mengisinya hanya data
+  // login SADS (`nimSads`), yang ikut hilang saat mahasiswa keluar dari SADS.
   const [nim, setNim] = useState("")
+  // `nimSads` terakhir yang sudah diterima. Datangnya bisa setelah panel
+  // terpasang (pesan `embed.js`), jadi isiannya diisi saat render begitu nilai
+  // baru tiba -- bukan lewat efek, yang sempat menggambar isian kosong dulu.
+  const [nimSadsDiterima, setNimSadsDiterima] = useState<string | null>(null)
+  if (nimSads !== null && nimSads !== nimSadsDiterima) {
+    setNimSadsDiterima(nimSads)
+    if (nim === "") setNim(nimSads)
+  }
+  const nimDariSads = nimSadsDiterima !== null && nim === nimSadsDiterima
   const hasilNim = uraiNim(nim, programs)
   const nimSah = hasilNim.status === "sah"
   // Pertanyaan siap klik per topik, kuncinya nama unit.
@@ -245,9 +262,10 @@ export function ChatPanel({
       <div ref={listRef} className={styles.messages} aria-live="polite" aria-busy={busy}>
         <BotBubble>
           <strong className={styles.greeting}>Hai, Civitas INSTIKI!</strong>
-          {adaTopik
-            ? "Apa yang ingin Anda tanyakan?\nIsi NIM Anda, lalu pilih topik di bawah ini."
-            : "Apa yang ingin Anda tanyakan?\nIsi NIM Anda, lalu tulis pertanyaan di bawah."}
+          {"Apa yang ingin Anda tanyakan?\n"}
+          {/* NIM dari login SADS sudah terisi: jangan minta mengetiknya lagi. */}
+          {nimDariSads ? "Silakan " : "Isi NIM Anda, lalu "}
+          {adaTopik ? "pilih topik di bawah ini." : "tulis pertanyaan di bawah."}
         </BotBubble>
 
         {!sudahMemilih && menu}
