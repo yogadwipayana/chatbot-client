@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { FaRobot } from "react-icons/fa"
 
 import { bentukNim } from "@/lib/sads"
 
 import styles from "./chat.module.css"
+import { ChatLogo } from "./chat-logo"
 import { BotBubble } from "./chat-message"
 import { ChatPanel } from "./chat-panel"
 
@@ -20,6 +20,8 @@ const PESAN_TUTUP = "asisten:tutup"
 const PESAN_SIAP = "asisten:siap"
 /** situs → iframe: `{nim}` mahasiswa yang sedang masuk SADS, atau null. */
 const PESAN_IDENTITAS = "asisten:identitas"
+/** iframe → situs: `{luas}` dari "Perluas jendela" di menu ⋯; situs melebarkan iframe. */
+const PESAN_PERLUAS = "asisten:perluas"
 
 /**
  * Isi halaman `/embed`.
@@ -66,6 +68,11 @@ export function EmbeddedChat({ widget, embedKey }: { widget: boolean; embedKey?:
     window.parent.postMessage({ type: PESAN_TUTUP }, "*")
   }
 
+  function perluas(luas: boolean) {
+    // "*" dengan alasan yang sama: isinya hanya ukuran yang diminta.
+    window.parent.postMessage({ type: PESAN_PERLUAS, luas }, "*")
+  }
+
   return (
     <ChatPanel
       open={open}
@@ -73,6 +80,11 @@ export function EmbeddedChat({ widget, embedKey }: { widget: boolean; embedKey?:
       className={styles.embedded}
       embedKey={embedKey}
       nimSads={nimSads}
+      // Dibuka sebagai halaman penuh, panelnya sudah selebar halaman. Di
+      // layar sempit `embed.js` mengabaikan permintaannya: iframe-nya sudah
+      // selebar layar.
+      expandable={widget}
+      onExpandChange={widget ? perluas : undefined}
     />
   )
 }
@@ -89,7 +101,7 @@ export function EmbedUnavailable({ status }: { status: "tidak-berlaku" | "gagal"
     <section className={styles.embedded} aria-labelledby="asisten-tidak-tersedia">
       <header className={styles.header}>
         <span className={styles.headerAvatar} aria-hidden>
-          <FaRobot />
+          <ChatLogo />
         </span>
         <div className={styles.heading}>
           <h2 id="asisten-tidak-tersedia" className={styles.title}>

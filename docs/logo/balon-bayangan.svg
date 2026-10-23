@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .bayangan { fill: #171717 } .balon { fill: #fff } .garis { stroke: #171717 }
+    @media (prefers-color-scheme: dark) {
+      .bayangan { fill: #fff } .balon { fill: #171717 } .garis { stroke: #fff }
+    }
+  </style>
+  <path class="bayangan" transform="translate(3.5 3.5)" d="M8 4h12a5 5 0 0 1 5 5v7a5 5 0 0 1-5 5h-7.5l-4.6 3.8c-.6.5-1.4.1-1.4-.7V20.6A5 5 0 0 1 3 16V9a5 5 0 0 1 5-5z"/>
+  <path class="balon garis" stroke-width="2.4" stroke-linejoin="round" d="M8 4h12a5 5 0 0 1 5 5v7a5 5 0 0 1-5 5h-7.5l-4.6 3.8c-.6.5-1.4.1-1.4-.7V20.6A5 5 0 0 1 3 16V9a5 5 0 0 1 5-5z"/>
+  <path class="garis" fill="none" stroke-width="2.4" stroke-linecap="round" d="M8.5 10.5h11M8.5 15h6.5"/>
+</svg>

@@ -19,6 +19,7 @@ import { potongKontak } from "@/lib/kontak"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
+import { potongMarkdown } from "./markdown"
 import type { ChatEntry, FeedbackControls, NoteState } from "./use-chat"
 
 type AssistantEntry = Extract<ChatEntry, { role: "assistant" }>
@@ -165,35 +166,35 @@ export function AssistantMessage({
   )
 }
 
-/** Tebal `**...**` atau kode sebaris `` `...` ``, mana yang lebih dulu muncul. */
-const PENANDA_MARKDOWN = /(\*\*[\s\S]+?\*\*|`[^`\n]+`)/g
 const URL_HTTP = /https?:\/\/[^\s<>"'`]+/gi
 
 /**
- * Model kadang menulis penekanan Markdown: tebal (`**3 Agustus 2026**`) dan
- * kode sebaris (`` `TRANSFER NomorVA NOMINAL` `` -- format SMS, kode bank).
- * URL HTTP(S) juga ditautkan otomatis; penanda sitasi `[Judul, hal. 12]`
- * ditampilkan apa adanya. Admin memakai salinan yang sama (`RichText` di
- * `admin/src/components/common.tsx`).
+ * Model kadang menulis penekanan Markdown: tebal (`**3 Agustus 2026**`),
+ * miring (`*Artificial Intelligence*`), dan kode sebaris
+ * (`` `TRANSFER NomorVA NOMINAL` ``); aturannya di `potongMarkdown`. URL
+ * HTTP(S) juga ditautkan otomatis.
  *
  * `tautKontak`: nomor telepon dijadikan tautan. Hanya untuk teks yang disusun
  * server dari daftar kontak (penolakan, dukungan), bukan jawaban LLM.
  */
 function RichText({ text, tautKontak = false }: { text: string; tautKontak?: boolean }) {
-  const bagian = text.split(PENANDA_MARKDOWN)
   return (
     <>
-      {bagian.map((teks, index) =>
-        index % 2 === 0 ? (
-          <TeksJawaban key={index} text={teks} tautKontak={tautKontak} />
-        ) : teks.startsWith("`") ? (
+      {potongMarkdown(text).map(({ jenis, isi }, index) =>
+        jenis === "teks" ? (
+          <TeksJawaban key={index} text={isi} tautKontak={tautKontak} />
+        ) : jenis === "kode" ? (
           <code key={index} className={styles.code}>
-            {teks.slice(1, -1)}
+            {isi}
           </code>
-        ) : (
+        ) : jenis === "tebal" ? (
           <strong key={index}>
-            <RichText text={teks.slice(2, -2)} />
+            <RichText text={isi} />
           </strong>
+        ) : (
+          <em key={index}>
+            <RichText text={isi} />
+          </em>
         )
       )}
     </>

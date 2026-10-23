@@ -59,6 +59,13 @@
   border-radius: var(--chat-radius);
   background: var(--chat-bg);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+  transition: width 0.2s ease;
+}
+
+/* "Perluas jendela" di menu ⋯, seperti widget Glide yang melebar dari ~400 ke
+   ~690 px. Panel /embed dilebarkan `embed.js` di situs penyemat. */
+.panel.panelWide {
+  width: min(680px, calc(100vw - 40px));
 }
 
 /* Halaman /embed: panel mengisi iframe yang dipasang `public/embed.js`, jadi
@@ -137,6 +144,163 @@
 .tool:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 1px;
+}
+
+/* --- Menu ⋯ (perluas, cari, unduh transkrip) ----------------------------- */
+
+.menuWrap {
+  position: relative;
+  flex: none;
+}
+
+/* Tombol ⋯ selagi menunya terbuka. */
+.toolActive {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 2;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.menuItem svg {
+  flex: none;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.menuItem:hover:not(:disabled),
+.menuItem:focus-visible {
+  background: var(--chat-bg);
+}
+
+.menuItem:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: -2px;
+}
+
+.menuItem:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Cari percakapan ------------------------------------------------------ */
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px 10px 12px;
+  border-bottom: 1px solid var(--chat-line);
+  background: #fff;
+}
+
+.searchBox {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  height: 38px;
+  margin-right: 4px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--chat-bg);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.searchBox:focus-within {
+  border-color: #f1b5ad;
+  background: #fff;
+}
+
+.searchIcon {
+  flex: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+}
+
+.searchInput:focus {
+  outline: none;
+}
+
+.searchCount {
+  flex: none;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.searchButton {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.searchButton:hover:not(:disabled) {
+  background: var(--chat-bg);
+}
+
+.searchButton:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.searchButton:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 1px;
+}
+
+/* Sorotan temuan (`chat-search.tsx`). Teksnya digelapkan: di gelembung
+   mahasiswa yang merah, teks putih di atas kuning tidak terbaca. */
+.messages ::highlight(asisten-cari) {
+  background-color: #ffe58a;
+  color: #333;
+}
+
+.messages ::highlight(asisten-cari-aktif) {
+  background-color: #ffb347;
+  color: #333;
 }
 
 /* Kolom flex supaya `.choices` dapat menempel di dasar (`margin-top: auto`)
@@ -707,19 +871,20 @@
   padding-top: 8px;
 }
 
-/* Tombol topik: nama unit saja, berbentuk pil selebar teksnya dan rata kiri,
-   sejajar dengan gelembung sapaan. Seluruh daftar muat tanpa digulir, jadi
-   sapaan tetap terlihat di atasnya. */
+/* Tombol topik: nama unit saja, berbentuk pil, rata kanan-kiri -- pil di tiap
+   baris melebar sampai barisnya penuh (`flex-grow` di `.topic`), jadi tepi
+   kiri dan kanannya lurus dengan lebar panel. Seluruh daftar muat tanpa
+   digulir, jadi sapaan tetap terlihat di atasnya. */
 .topics {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-start;
   gap: 8px;
   margin: 0 0 8px;
 }
 
 .topic {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   justify-content: center;
   max-width: 100%;
@@ -979,7 +1144,8 @@
     white-space: nowrap;
   }
 
-  .panel {
+  .panel,
+  .panel.panelWide {
     right: 10px;
     left: 10px;
     bottom: 78px;
@@ -995,7 +1161,9 @@
   }
 
   .launcher,
-  .topic {
+  .topic,
+  .panel,
+  .searchBox {
     transition: none;
   }
 

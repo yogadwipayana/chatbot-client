@@ -178,6 +178,7 @@ sequenceDiagram
   | `{type: "asisten:tutup"}` | iframe → situs | Ditutup lewat ✕ atau Escape di panel; situs menyembunyikan iframe dan mengembalikan fokus ke tombol |
   | `{type: "asisten:siap"}` | iframe → situs | Panel sudah bisa menerima pesan; minta NIM login SADS |
   | `{type: "asisten:identitas", nim}` | situs → iframe | Balasan `asisten:siap`: NIM mahasiswa yang sedang masuk SADS, atau `null` |
+  | `{type: "asisten:perluas", luas}` | iframe → situs | "Perluas jendela"/"Ciutkan jendela" di menu ⋯ panel; situs melebarkan iframe ke `min(680px, 100vw - 40px)` atau mengembalikannya. Diabaikan di layar ≤ 575 px, karena iframe-nya sudah selebar layar |
 
   `embed.js` hanya menerima pesan yang `origin`-nya domain portal **dan**
   `source`-nya iframe miliknya sendiri. Iframe hanya menerima pesan dari

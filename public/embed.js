@@ -14,8 +14,8 @@
  * daftar itu tetap mendapat tombolnya, tetapi peramban menolak panelnya.
  *
  * Di SADS, NIM mahasiswa yang sedang masuk dibaca dari localStorage halaman
- * (`kojindeta`, ditulis SADS sendiri) dan diteruskan ke panel, supaya tidak
- * perlu diketik lagi. Hanya dibaca, dan hanya NIM yang dikirim.
+ * (`kojindeta`, ditulis SADS sendiri) dan diteruskan ke panel, yang tidak
+ * punya isian NIM. Hanya dibaca, dan hanya NIM yang dikirim.
  *
  * Disajikan apa adanya dari public/, tanpa build step. Berkas ini berjalan di
  * halaman milik orang lain: jangan sentuh apa pun di luar elemennya sendiri.
@@ -46,6 +46,7 @@
   const PESAN_TUTUP = "asisten:tutup"
   const PESAN_SIAP = "asisten:siap"
   const PESAN_IDENTITAS = "asisten:identitas"
+  const PESAN_PERLUAS = "asisten:perluas"
 
   // Ikon FaComments dan FaTimes (react-icons), sama dengan tombol di portal.
   const IKON_BUKA = svg(
@@ -124,6 +125,12 @@
       border-radius: 3px;
       background: #fff;
       box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+      transition: width 0.2s ease;
+    }
+
+    /* "Perluas jendela" di menu panel (pesan asisten:perluas). */
+    .frame.luas {
+      width: min(680px, calc(100vw - 40px));
     }
 
     .frame[hidden] {
@@ -153,7 +160,8 @@
         white-space: nowrap;
       }
 
-      .frame {
+      .frame,
+      .frame.luas {
         right: 10px;
         left: 10px;
         bottom: 76px;
@@ -163,7 +171,8 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
-      .launcher {
+      .launcher,
+      .frame {
         transition: none;
       }
     }
@@ -227,6 +236,8 @@
     else if (type === PESAN_SIAP) {
       iframe.contentWindow.postMessage({ type: PESAN_IDENTITAS, nim: nimSads() }, ASAL)
     }
+    // Di layar sempit iframe-nya sudah selebar layar (media query di atas).
+    else if (type === PESAN_PERLUAS) frame.classList.toggle("luas", event.data.luas === true)
   })
 
   render()

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <style>
+    path { fill: #171717 }
+    @media (prefers-color-scheme: dark) { path { fill: #fff } }
+  </style>
+  <path d="M3 1h10v1h-10zM2 2h12v1h-12zM1 3h14v1h-14zM1 4h4v2h-4zM7 4h2v2h-2zM11 4h4v2h-4zM1 6h14v2h-14zM1 8h5v1h-5zM10 8h5v1h-5zM1 9h14v1h-14zM2 10h12v1h-12zM3 11h10v1h-10zM3 12h4v1h-4zM3 13h2v1h-2zM3 14h1v1h-1z"/>
+</svg>

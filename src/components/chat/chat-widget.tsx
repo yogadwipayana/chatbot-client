@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useSyncExternalStore } from "react"
 import { FaComments, FaTimes } from "react-icons/fa"
 
 import { nimLoginSads } from "@/lib/sads"
@@ -16,6 +16,9 @@ import { ChatPanel, PANEL_ID } from "./chat-panel"
 export function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [nimSads, setNimSads] = useState<string | null>(null)
+  // Di layar sempit panelnya sudah selebar layar (media query di
+  // chat.module.css), jadi "Perluas jendela" tidak ditawarkan.
+  const layarLebar = useSyncExternalStore(pantauLayarLebar, layarLebarSekarang, () => true)
 
   function toggle() {
     // Dibaca saat panel dibuka, bukan saat halaman dimuat: data login SADS
@@ -31,6 +34,7 @@ export function ChatWidget() {
         onClose={() => setOpen(false)}
         className={styles.panel}
         nimSads={nimSads}
+        expandable={layarLebar}
       />
 
       <button
@@ -45,4 +49,17 @@ export function ChatWidget() {
       </button>
     </>
   )
+}
+
+/** Batas yang sama dengan `@media (max-width: 575px)` di chat.module.css. */
+const LAYAR_LEBAR = "(min-width: 576px)"
+
+function pantauLayarLebar(onChange: () => void) {
+  const media = window.matchMedia(LAYAR_LEBAR)
+  media.addEventListener("change", onChange)
+  return () => media.removeEventListener("change", onChange)
+}
+
+function layarLebarSekarang() {
+  return window.matchMedia(LAYAR_LEBAR).matches
 }

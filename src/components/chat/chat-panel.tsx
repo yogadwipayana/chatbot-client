@@ -1,7 +1,7 @@
 "use client"
 
-import { Fragment, useEffect, useRef, useState } from "react"
-import { FaExchangeAlt, FaPaperPlane, FaRobot, FaStop, FaTimes } from "react-icons/fa"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
+import { FaExchangeAlt, FaPaperPlane, FaStop, FaTimes } from "react-icons/fa"
 
 import {
   fetchFaqQuestions,
@@ -14,8 +14,12 @@ import { uraiNim, type HasilNim } from "@/lib/nim"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
+import { ChatLogo } from "./chat-logo"
+import { MenuPanel } from "./chat-menu"
 import { AssistantMessage, BotBubble, UserMessage } from "./chat-message"
+import { CariPercakapan } from "./chat-search"
 import { FaqQuestions, TopicMenu, topicReply } from "./topic-menu"
+import { namaBerkasTranskrip, susunTranskrip, unduhTeks } from "./transkrip"
 import { bannerEskalasiTerakhir, useChat } from "./use-chat"
 
 export const PANEL_ID = "asisten-administrasi"
@@ -52,11 +56,20 @@ export function ChatPanel({
   className,
   embedKey,
   nimSads = null,
+  expandable = false,
+  onExpandChange,
 }: {
   open: boolean
   /** Tanpa ini tidak ada tombol tutup -- `/embed` yang dibuka sebagai halaman penuh. */
   onClose?: () => void
   className: string
+  /**
+   * Menu ⋯ menawarkan "Perluas jendela". Widget portal melebarkan `.panel`
+   * sendiri; panel `/embed` di situs lain meminta `embed.js` melebarkan
+   * iframe-nya lewat `onExpandChange`.
+   */
+  expandable?: boolean
+  onExpandChange?: (luas: boolean) => void
   /** Kunci situs penyemat; hanya diisi panel `/embed` yang dimuat situs lain. */
   embedKey?: string
   /**
@@ -102,8 +115,16 @@ export function ChatPanel({
   const bannerEskalasi = bannerEskalasiTerakhir(entries)
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  // Menu ⋯ di kepala panel (`chat-menu.tsx`).
+  const menuTombolRef = useRef<HTMLButtonElement>(null)
+  const [luas, setLuas] = useState(false)
+  const [cariTerbuka, setCariTerbuka] = useState(false)
+  // Pencarian diulang setiap kali isi percakapan berubah. Balasan topik ikut
+  // berubah saat pertanyaan siap kliknya selesai dimuat.
+  const isiPercakapan = useMemo(() => [entries, faq], [entries, faq])
 
   const adaTopik = units !== null && units.length > 0
+  const ajakan = adaTopik ? "Silakan pilih topik di bawah ini." : "Silakan tulis pertanyaan di bawah."
   const jumlahPilihan = entries.filter((entry) => entry.role === "topic").length
   const bolehMengetik = nimSah && (jumlahPilihan > 0 || (units !== null && units.length === 0))
   const sudahMemilih = adaTopik && jumlahPilihan > 0
@@ -203,10 +224,37 @@ export function ChatPanel({
     void send(question)
   }
 
+  function gantiLuas() {
+    setLuas(!luas)
+    onExpandChange?.(!luas)
+  }
+
+  function bukaPencarian() {
+    if (cariTerbuka) document.getElementById(`${PANEL_ID}-cari`)?.focus()
+    else setCariTerbuka(true)
+  }
+
+  function tutupPencarian() {
+    setCariTerbuka(false)
+    menuTombolRef.current?.focus()
+  }
+
+  function unduhTranskrip() {
+    const waktu = new Date()
+    const isi = susunTranskrip({
+      entries,
+      sapaan: `Hai, Civitas INSTIKI!\nApa yang ingin Anda tanyakan?\n${ajakan}`,
+      balasanTopik: (nama) => topicReply(nama, faq[nama]),
+      eskalasi: bannerEskalasi,
+      waktu,
+    })
+    unduhTeks(namaBerkasTranskrip(waktu), isi)
+  }
+
   return (
     <section
       id={PANEL_ID}
-      className={className}
+      className={cx(className, expandable && luas && styles.panelWide)}
       hidden={!open}
       // Dibuka sebagai halaman penuh ia bukan dialog di atas halaman lain.
       role={onClose ? "dialog" : undefined}
@@ -215,7 +263,7 @@ export function ChatPanel({
     >
       <header className={styles.header}>
         <span className={styles.headerAvatar} aria-hidden>
-          <FaRobot />
+          <ChatLogo />
         </span>
         <div className={styles.heading}>
           <h2 id={`${PANEL_ID}-judul`} className={styles.title}>
@@ -223,6 +271,16 @@ export function ChatPanel({
           </h2>
           <p className={styles.subtitle}>Menjawab dari dokumen resmi kampus</p>
         </div>
+        <MenuPanel
+          id={`${PANEL_ID}-menu`}
+          tombolRef={menuTombolRef}
+          luas={luas}
+          bisaDiperluas={expandable}
+          onPerluas={gantiLuas}
+          onCari={bukaPencarian}
+          onUnduh={unduhTranskrip}
+          unduhNonaktif={entries.length === 0}
+        />
         {onClose && (
           <button
             type="button"
@@ -235,6 +293,15 @@ export function ChatPanel({
         )}
       </header>
 
+      {cariTerbuka && (
+        <CariPercakapan
+          id={`${PANEL_ID}-cari`}
+          listRef={listRef}
+          isi={isiPercakapan}
+          onClose={tutupPencarian}
+        />
+      )}
+
       {/* `aria-busy` menahan pembacaan selagi jawaban mengalir: tanpa itu
           pembaca layar mengulang kalimat yang sama setiap satu potongan
           tiba, dan jawabannya tidak pernah terbaca utuh. */}
@@ -242,7 +309,7 @@ export function ChatPanel({
         <BotBubble>
           <strong className={styles.greeting}>Hai, Civitas INSTIKI!</strong>
           {"Apa yang ingin Anda tanyakan?\n"}
-          {adaTopik ? "Silakan pilih topik di bawah ini." : "Silakan tulis pertanyaan di bawah."}
+          {ajakan}
         </BotBubble>
 
         {!sudahMemilih && menu}
