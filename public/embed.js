@@ -48,11 +48,18 @@
   const PESAN_IDENTITAS = "asisten:identitas"
   const PESAN_PERLUAS = "asisten:perluas"
 
-  // Ikon FaComments dan FaTimes (react-icons), sama dengan tombol di portal.
-  const IKON_BUKA = svg(
-    "0 0 576 512",
-    "M416 192c0-88.4-93.1-160-208-160S0 103.6 0 192c0 34.3 14.1 65.9 38 92-13.4 30.2-35.5 54.2-35.8 54.5-2.2 2.3-2.8 5.7-1.5 8.7S4.8 352 8 352c36.6 0 66.9-12.3 88.7-25 32.2 15.7 70.3 25 111.3 25 114.9 0 208-71.6 208-160zm122 220c23.9-26 38-57.7 38-92 0-66.9-53.5-124.2-129.3-148.1.9 6.6 1.3 13.3 1.3 20.1 0 105.9-107.7 192-240 192-10.8 0-21.3-.8-31.7-1.9C207.8 439.6 281.8 480 368 480c41 0 79.1-9.2 111.3-25 21.8 12.7 52.1 25 88.7 25 3.2 0 6.1-1.9 7.3-4.8 1.3-2.9.7-6.3-1.5-8.7-.3-.3-22.4-24.2-35.8-54.5z"
-  )
+  // Logo asisten, salinan `ChatLogo` (src/components/chat/chat-logo.tsx) di
+  // tombol portal: bila logonya diganti, samakan keduanya (docs/logo/README.md).
+  // Warnanya tetap; `fill` pada tiap path mengalahkan `fill: currentColor`.
+  const BALON =
+    "M8 4h12a5 5 0 0 1 5 5v7a5 5 0 0 1-5 5h-7.5l-4.6 3.8c-.6.5-1.4.1-1.4-.7V20.6A5 5 0 0 1 3 16V9a5 5 0 0 1 5-5z"
+  const IKON_BUKA =
+    `<svg class="logo" viewBox="0 0 32 32" aria-hidden="true" focusable="false">` +
+    `<path fill="#171717" transform="translate(3.5 3.5)" d="${BALON}"></path>` +
+    `<path fill="#fff" stroke="#171717" stroke-width="2.4" stroke-linejoin="round" d="${BALON}"></path>` +
+    `<path fill="none" stroke="#171717" stroke-width="2.4" stroke-linecap="round" d="M8.5 10.5h11M8.5 15h6.5"></path>` +
+    `</svg>`
+  // Ikon FaTimes (react-icons), sama dengan tombol di portal.
   const IKON_TUTUP = svg(
     "0 0 352 512",
     "M242.72 256l100.07-100.07c12.28-12.28 12.28-32.19 0-44.48l-22.24-22.24c-12.28-12.28-32.19-12.28-44.48 0L176 189.28 75.93 89.21c-12.28-12.28-32.19-12.28-44.48 0L9.21 111.45c-12.28 12.28-12.28 32.19 0 44.48L109.28 256 9.21 356.07c-12.28 12.28-12.28 32.19 0 44.48l22.24 22.24c12.28 12.28 32.2 12.28 44.48 0L176 322.72l100.07 100.07c12.28 12.28 32.2 12.28 44.48 0l22.24-22.24c12.28-12.28 12.28-32.19 0-44.48L242.72 256z"
@@ -112,6 +119,11 @@
       height: 1em;
       font-size: 18px;
       fill: currentColor;
+    }
+
+    /* Sama dengan <ChatLogo size={24} /> di tombol portal. */
+    .launcher svg.logo {
+      font-size: 24px;
     }
 
     .frame {

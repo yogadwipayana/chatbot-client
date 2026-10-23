@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useSyncExternalStore } from "react"
-import { FaComments, FaTimes } from "react-icons/fa"
+import { FaTimes } from "react-icons/fa"
 
 import { nimLoginSads } from "@/lib/sads"
 
 import styles from "./chat.module.css"
+import { ChatLogo } from "./chat-logo"
 import { ChatPanel, PANEL_ID } from "./chat-panel"
 
 /**
@@ -44,7 +45,7 @@ export function ChatWidget() {
         aria-expanded={open}
         aria-controls={PANEL_ID}
       >
-        {open ? <FaTimes aria-hidden /> : <FaComments aria-hidden />}
+        {open ? <FaTimes aria-hidden /> : <ChatLogo size={24} />}
         <span className={styles.launcherLabel}>{open ? "Tutup" : "Tanya Asisten"}</span>
       </button>
     </>
