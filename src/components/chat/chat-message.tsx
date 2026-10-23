@@ -10,7 +10,6 @@ import {
   FaRegCommentDots,
   FaRegThumbsDown,
   FaRegThumbsUp,
-  FaRobot,
   FaThumbsDown,
   FaThumbsUp,
 } from "react-icons/fa"
@@ -41,7 +40,11 @@ export function UserMessage({ text, unit }: { text: string; unit: string | null 
   )
 }
 
-/** Baris pesan asisten: avatar, gelembung, lalu tambahan di bawahnya. */
+/**
+ * Pesan asisten: gelembung tanpa avatar, keterangan pengirim kecil di
+ * bawahnya (seperti "Fin • AI Agent" di widget Glide, docs/glide.md), lalu
+ * tambahan seperti sumber dan penilaian.
+ */
 export function BotBubble({
   tone,
   children,
@@ -54,15 +57,12 @@ export function BotBubble({
   return (
     <div className={styles.msg}>
       <div className={styles.name}>Asisten</div>
-      <div className={styles.row}>
-        <span className={styles.avatar} aria-hidden>
-          <FaRobot />
-        </span>
-        <div className={styles.body}>
-          <div className={cx(styles.text, tone && styles[tone])}>{children}</div>
-          {extra}
-        </div>
-      </div>
+      <div className={cx(styles.text, tone && styles[tone])}>{children}</div>
+      {/* Pembaca layar sudah mendengar nama "Asisten" di atas gelembung. */}
+      <p className={styles.meta} aria-hidden>
+        Asisten · AI
+      </p>
+      {extra}
     </div>
   )
 }

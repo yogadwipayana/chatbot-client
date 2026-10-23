@@ -190,9 +190,11 @@ sequenceDiagram
   (NIM) lalu mengirimnya sebagai `asisten:identitas`. Hanya NIM yang dikirim;
   `nama`, `jur`, token, dan isi lainnya tidak pernah meninggalkan halaman SADS.
   Akun dengan `role` selain 1 (dosen/staf) dan nilai yang bukan 10 angka
-  dianggap tidak ada. NIM itu hanya mengisi isian NIM yang masih kosong:
-  mahasiswa tetap dapat mengubahnya, dan API memperlakukannya sama dengan NIM
-  yang diketik. Di situs lain kuncinya tidak ada, jadi NIM tetap diketik.
+  dianggap tidak ada. Panel tidak punya isian NIM (sejak 2026-10-23), dan
+  prodi serta angkatannya tidak ditampilkan: NIM ini satu-satunya sumber NIM.
+  Karena API mewajibkan NIM, di situs lain -- yang tidak punya `kojindeta` --
+  dan saat `/embed` dibuka langsung, ubin topik nonaktif dan panel menulis
+  "Asisten hanya dapat dipakai mahasiswa yang sudah masuk SADS."
   Pembacanya ada dua dan harus sejalan: `nimSads` di `embed.js` dan
   `bacaLoginSads` di `src/lib/sads.ts`.
 - **Portal meniru Sign In SADS di `/masuk`.** Halaman portal (`/`) hanya
@@ -275,7 +277,7 @@ memasang baris `<script>` dari `?key=` itu; alamat portal di `index.html` dituli
 - Halaman contoh juga memperingatkan bila `?key=` belum diberikan, atau bila
   portal belum berjalan ("embed.js tidak termuat").
 - **Meniru mahasiswa yang sudah masuk SADS:** jalankan di konsol halaman
-  contoh, lalu muat ulang dan buka panelnya. Isian NIM langsung terisi.
+  contoh, lalu muat ulang dan buka panelnya. Tanpa ini ubin topik nonaktif.
 
   ```js
   localStorage.setItem("kojindeta", JSON.stringify({ id1: "2401010101", nama: "Yoga", jur: "IF-MTI" }))

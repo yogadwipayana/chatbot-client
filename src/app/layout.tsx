@@ -12,7 +12,7 @@ const sourceSans = Source_Sans_3({
 export const metadata: Metadata = {
   title: {
     default: "SADS",
-    template: "%s · SADS",
+    template: "%s | SADS",
   },
   description: "Portal akademik mahasiswa dengan asisten administrasi berbasis dokumen resmi.",
   robots: { index: false, follow: false },

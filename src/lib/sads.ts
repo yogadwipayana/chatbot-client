@@ -1,8 +1,8 @@
 import { PANJANG_NIM } from "@/lib/nim"
 
 /**
- * Data login SADS di `localStorage`, dipakai untuk mengisi NIM asisten
- * sendiri: mahasiswa yang sudah masuk SADS tidak perlu mengetiknya lagi.
+ * Data login SADS di `localStorage`, satu-satunya sumber NIM asisten: panelnya
+ * tidak punya isian NIM, jadi tanpa login SADS asisten tidak dapat dipakai.
  *
  * SADS (sads.instiki.ac.id) menulis kunci `kojindeta` setelah Sign In berhasil,
  * dan halaman login-nya menjalankan `localStorage.clear()` setiap kali dibuka --
@@ -37,7 +37,7 @@ export function nimLoginSads(): string | null {
   try {
     return nimDariLoginSads(localStorage.getItem(KUNCI_LOGIN_SADS))
   } catch {
-    // localStorage diblokir: NIM diketik seperti biasa.
+    // localStorage diblokir: dianggap belum masuk.
     return null
   }
 }

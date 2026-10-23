@@ -247,7 +247,7 @@
       const nim = typeof data.id1 === "number" ? String(data.id1) : String(data.id1 || "").trim()
       return /^\d{10}$/.test(nim) ? nim : null
     } catch {
-      // Isinya bukan JSON, atau localStorage diblokir: NIM diketik seperti biasa.
+      // Isinya bukan JSON, atau localStorage diblokir: dianggap belum masuk.
       return null
     }
   }

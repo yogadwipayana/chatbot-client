@@ -1,9 +1,8 @@
 "use client"
 
-import { FaCheck, FaChevronRight } from "react-icons/fa"
+import { FaChevronRight } from "react-icons/fa"
 
 import type { Unit } from "@/lib/api/chat"
-import { PANJANG_NIM, type HasilNim } from "@/lib/nim"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
@@ -52,72 +51,6 @@ export function TopicMenu({
           </button>
         )
       })}
-    </div>
-  )
-}
-
-/**
- * Isian NIM di atas ubin topik. Wajib: ubin topik dan kotak pertanyaan baru
- * aktif setelah NIM-nya sah. Jawaban yang di dokumen berbeda per prodi atau
- * angkatan -- harga sertifikasi, kurikulum -- dijawab untuk penanya, dan NIM-nya
- * dicatat bersama pertanyaan; teks di bawah isian memberi tahu keduanya
- * sebelum NIM diketik.
- *
- * Hanya angka yang diterima. Hasil uraiannya ditampilkan di bawahnya, jadi NIM
- * yang salah ketik terlihat sebelum pertanyaan pertama terkirim.
- */
-export function NimField({
-  id,
-  value,
-  onChange,
-  hasil,
-}: {
-  id: string
-  value: string
-  onChange: (nim: string) => void
-  hasil: HasilNim
-}) {
-  const salah = hasil.status === "tidak-dikenal" || hasil.status === "tanpa-daftar"
-  return (
-    <div className={styles.nim}>
-      <div className={styles.nimRow}>
-        <label htmlFor={id} className={styles.nimLabel}>
-          NIM <span>(wajib)</span>
-        </label>
-        <input
-          id={id}
-          className={styles.nimInput}
-          value={value}
-          onChange={(event) =>
-            onChange(event.target.value.replace(/\D/g, "").slice(0, PANJANG_NIM))
-          }
-          // Tanpa `maxLength`: peramban memotong sebelum `onChange` menyaring,
-          // jadi NIM yang ditempel berspasi ("2401 0101 01") kehilangan angka
-          // terakhirnya. Batasnya dipegang `slice` di atas.
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="mis. 2401010101"
-          required
-          aria-invalid={salah}
-          aria-describedby={`${id}-info`}
-        />
-      </div>
-      <p id={`${id}-info`} className={cx(styles.nimInfo, salah && styles.nimInfoError)}>
-        {hasil.status === "sah" ? (
-          <>
-            <FaCheck aria-hidden className={styles.nimOk} />
-            {hasil.prodi.name} ({hasil.prodi.level}) · angkatan {hasil.angkatan}
-          </>
-        ) : hasil.status === "tidak-dikenal" ? (
-          hasil.pesan
-        ) : hasil.status === "tanpa-daftar" ? (
-          "Daftar prodi gagal dimuat, jadi NIM belum dapat diperiksa. Tutup lalu buka lagi panel ini, atau muat ulang halaman."
-        ) : hasil.status === "belum-lengkap" ? (
-          `NIM terdiri dari ${PANJANG_NIM} angka.`
-        ) : (
-          "Jawaban disesuaikan dengan prodi dan angkatan Anda. NIM dicatat bersama pertanyaan Anda."
-        )}
-      </p>
     </div>
   )
 }

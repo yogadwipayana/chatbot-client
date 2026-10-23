@@ -48,7 +48,7 @@ export function EmbeddedChat({ widget, embedKey }: { widget: boolean; embedKey?:
       if (type === PESAN_BUKA) setOpen(true)
       else if (type === PESAN_TUTUP) setOpen(false)
       // Situs mana pun yang terdaftar untuk kunci ini bisa mengirimnya, jadi
-      // nilainya diperlakukan sama dengan NIM yang diketik: diperiksa `uraiNim`.
+      // nilainya tetap diperiksa `uraiNim` sebelum dipakai.
       else if (type === PESAN_IDENTITAS) setNimSads(bentukNim(data?.nim))
     }
     window.addEventListener("message", onMessage)
