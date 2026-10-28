@@ -421,15 +421,10 @@
   margin-bottom: 14px;
 }
 
+/* Nama pengirim hanya untuk pembaca layar. Pesan asisten ditandai `.meta` di
+   bawah gelembungnya, dan pertanyaan mahasiswa cukup dikenali dari gelembung
+   merah di kanan, seperti di widget Glide. */
 .name {
-  margin-bottom: 3px;
-  font-size: 11px;
-  color: var(--muted);
-}
-
-/* Pesan asisten ditandai `.meta` di bawah gelembung; namanya tetap ada untuk
-   pembaca layar. */
-.msg:not(.msgUser) .name {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -592,11 +587,6 @@
 }
 
 /* Label unit tujuan di samping nama "Anda". */
-.scopeTag {
-  color: var(--red-darker);
-  font-weight: 600;
-}
-
 /* --- Sitasi (FE-2) ------------------------------------------------------ */
 
 .sources {
@@ -1077,64 +1067,14 @@
   flex: none;
 }
 
-/* Lingkup pencarian yang sedang berlaku, beserta tombol menggantinya: menu
-   topiknya sendiri menghilang setelah dipilih. */
-.scopeBar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px 0;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.scopeName {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.scopeName strong {
-  font-weight: 600;
-  color: var(--red-darker);
-}
-
-.scopeChange {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--chat-line);
-  border-radius: 13px;
-  background: #fff;
-  color: var(--text-soft);
-  font-size: 12px;
-  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
-}
-
-.scopeChange:hover {
-  border-color: var(--red);
-  color: var(--red);
-}
-
-.scopeChangeOpen,
-.scopeChangeOpen:hover {
-  border-color: var(--red);
-  background: #fff7f6;
-  color: var(--red);
-}
-
 /* Composer bergaya Fin di Glide (docs/glide.md, gambar 16): satu kotak
-   berbingkai dengan tombol kirim di dalamnya. Tanpa deretan alat di bawah
-   teks seperti Glide -- hanya teks yang bisa dikirim -- jadi tombolnya duduk di
-   kanan teks dan kotaknya cukup setinggi satu baris. Kotaknya tumbuh ke atas
-   bersama teksnya, dan tombolnya tetap di pojok kanan bawah. */
+   berbingkai dengan tombol kirim di dalamnya. Bawaannya sebaris -- tombol
+   kirim di kanan teks -- dan `.composerStacked` (ada topik) menurunkan tombol
+   itu ke deretan alat di bawah teks, bersama pengganti topik. Kotaknya tumbuh
+   ke atas bersama teksnya, dan tombol kirim tetap di pojok kanan bawah. */
 .composer {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-end;
   margin: 10px 12px 6px;
   border: 1px solid #d6d9df;
@@ -1186,6 +1126,73 @@
   display: flex;
   flex: none;
   padding: 6px;
+}
+
+/* Teks selebar kotak; pengganti topik dan tombol kirim turun ke deretan
+   bawahnya, seperti deretan alat di composer Glide. */
+.composerStacked .input {
+  flex-basis: 100%;
+  padding: 12px 16px 2px;
+  border-radius: 16px 16px 0 0;
+}
+
+.composerStacked .composerAction {
+  margin-left: auto;
+  padding: 2px 6px 6px;
+}
+
+/* Topik yang berlaku sekaligus tombol untuk menggantinya: membuka dan
+   menutup menu topik di dasar percakapan, tepat di atas kotak ini. */
+.topicSwitch {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: calc(100% - 64px);
+  height: 28px;
+  margin: 0 0 4px 10px;
+  padding: 0 11px;
+  border: 1px solid var(--chat-line);
+  border-radius: 14px;
+  background: var(--chat-bg);
+  color: var(--text-soft);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+}
+
+.topicSwitch svg {
+  flex: none;
+  font-size: 11px;
+}
+
+.topicSwitchText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topicSwitchText strong {
+  font-weight: 600;
+  color: var(--red-darker);
+}
+
+.topicSwitch:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.topicSwitchOpen,
+.topicSwitchOpen:hover {
+  border-color: var(--red);
+  background: #fff7f6;
+  color: var(--red);
+}
+
+.topicSwitch:focus-visible {
+  outline: 2px solid var(--red-darker);
+  outline-offset: 2px;
 }
 
 .send {

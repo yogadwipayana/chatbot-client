@@ -43,7 +43,7 @@ const MAKS_KARAKTER = 200
  * diketik: diambil dari login SADS (`nimSads`), dan tanpa NIM yang sah menu
  * topiknya nonaktif. Sesudah topik dipilih menunya minggir
  * -- yang dibaca tinggal percakapan -- dan topiknya diganti lewat tombol di
- * dekat kotak pertanyaan. Saran pertanyaan umum (FE-6) sengaja tidak
+ * dalam kotak pertanyaan. Saran pertanyaan umum (FE-6) sengaja tidak
  * ditampilkan di sapaan -- mengkliknya akan melewati pilihan unit; pertanyaan
  * siap klik kini muncul per topik.
  *
@@ -113,6 +113,10 @@ export function ChatPanel({
     hasilNim.status === "sah" ? hasilNim.nim : null
   )
   const bannerEskalasi = bannerEskalasiTerakhir(entries)
+  // "Asisten · AI" hanya di bawah balasan asisten terakhir -- sapaan selama
+  // belum ada balasan lain -- seperti "Fin • AI Agent" di widget Glide.
+  // Balasan topik ikut dihitung: gelembungnya juga gelembung asisten.
+  const balasanTerakhir = entries.findLast((entry) => entry.role !== "user")?.id
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   // Menu ⋯ di kepala panel (`chat-menu.tsx`).
@@ -314,7 +318,7 @@ export function ChatPanel({
           pembaca layar mengulang kalimat yang sama setiap satu potongan
           tiba, dan jawabannya tidak pernah terbaca utuh. */}
       <div ref={listRef} className={styles.messages} aria-live="polite" aria-busy={busy}>
-        <BotBubble>
+        <BotBubble meta={balasanTerakhir === undefined}>
           <strong className={styles.greeting}>Hai, Civitas INSTIKI!</strong>
           {"Apa yang ingin Anda tanyakan?\n"}
           {ajakan}
@@ -332,6 +336,7 @@ export function ChatPanel({
               <Fragment key={entry.id}>
                 <UserMessage text={entry.unit} unit={null} />
                 <BotBubble
+                  meta={entry.id === balasanTerakhir}
                   extra={
                     questions && (
                       <FaqQuestions
@@ -353,6 +358,7 @@ export function ChatPanel({
               entry={entry}
               controls={feedback}
               showEscalation={bannerEskalasi.has(entry.id)}
+              meta={entry.id === balasanTerakhir}
             />
           )
         })}
@@ -361,34 +367,17 @@ export function ChatPanel({
       </div>
 
       <footer className={styles.footer}>
-        {sudahMemilih && (
-          // Menu yang tersembunyi membuat lingkup pencarian ikut tak terlihat,
-          // jadi topik yang sedang berlaku disebut di sini -- di sebelah satu-
-          // satunya tombol untuk menggantinya.
-          <div className={styles.scopeBar}>
-            <span className={styles.scopeName}>
-              Topik: <strong>{unit}</strong>
-            </span>
-            <button
-              type="button"
-              className={cx(styles.scopeChange, menuTerbuka && styles.scopeChangeOpen)}
-              onClick={() => setMenuTerbuka((terbuka) => !terbuka)}
-              aria-expanded={menuTerbuka}
-              aria-controls={`${PANEL_ID}-topik`}
-            >
-              {menuTerbuka ? <FaTimes aria-hidden /> : <FaExchangeAlt aria-hidden />}
-              {menuTerbuka ? "Tutup daftar" : "Ganti topik"}
-            </button>
-          </div>
-        )}
         {bolehMengetik ? (
           // Satu kotak seperti composer Fin di Glide (docs/glide.md, gambar
-          // 16), dengan tombol kirim di dalamnya, di kanan teks. Hanya teks
-          // yang bisa dikirim, jadi tanpa tombol lampiran, emoji, atau suara.
-          // Seluruh kotaknya tampak sebagai tempat mengetik, jadi klik di
-          // mana pun selain tombolnya memindahkan fokus ke textarea.
+          // 16), dengan tombol kirim di dalamnya. Hanya teks yang bisa
+          // dikirim, jadi deretan alat di bawah teks -- lampiran, emoji, suara
+          // di Glide -- di sini berisi pengganti topik. Tanpa topik (daftar
+          // unit gagal dimuat) deretan itu kosong, jadi tombol kirimnya duduk
+          // di kanan teks dan kotaknya cukup sebaris. Seluruh kotaknya tampak
+          // sebagai tempat mengetik, jadi klik di mana pun selain tombolnya
+          // memindahkan fokus ke textarea.
           <form
-            className={styles.composer}
+            className={cx(styles.composer, sudahMemilih && styles.composerStacked)}
             onSubmit={(event) => {
               event.preventDefault()
               ask(draft)
@@ -417,7 +406,7 @@ export function ChatPanel({
                 ask(draft)
               }}
               // Singkat seperti composer Glide; topiknya sudah tertulis di
-              // atas kotak ("Topik: …").
+              // pengganti topik di bawah teks ("Topik: …").
               placeholder="Pesan…"
               rows={1}
               maxLength={MAKS_KARAKTER}
@@ -429,6 +418,25 @@ export function ChatPanel({
             <p id={`${PANEL_ID}-sisa`} className="sr-only">
               Maksimal {MAKS_KARAKTER} karakter.
             </p>
+            {sudahMemilih && (
+              // Menu yang tersembunyi membuat lingkup pencarian ikut tak
+              // terlihat, jadi topik yang sedang berlaku tertulis di satu-
+              // satunya tombol untuk menggantinya. Menunya terbuka di dasar
+              // percakapan, tepat di atas kotak ini.
+              <button
+                type="button"
+                className={cx(styles.topicSwitch, menuTerbuka && styles.topicSwitchOpen)}
+                onClick={() => setMenuTerbuka((terbuka) => !terbuka)}
+                aria-expanded={menuTerbuka}
+                aria-controls={`${PANEL_ID}-topik`}
+                title={menuTerbuka ? "Tutup daftar topik" : "Ganti topik"}
+              >
+                {menuTerbuka ? <FaTimes aria-hidden /> : <FaExchangeAlt aria-hidden />}
+                <span className={styles.topicSwitchText}>
+                  Topik: <strong>{unit}</strong>
+                </span>
+              </button>
+            )}
             <div className={styles.composerAction}>
               {busy ? (
                 // Tempat yang sama dengan tombol kirim: selagi jawaban disusun,

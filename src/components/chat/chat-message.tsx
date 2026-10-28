@@ -25,16 +25,17 @@ import type { ChatEntry, FeedbackControls, NoteState } from "./use-chat"
 type AssistantEntry = Extract<ChatEntry, { role: "assistant" }>
 
 /**
- * `unit` ditampilkan di samping nama: setelah mahasiswa berganti pilihan di
- * tengah percakapan, hanya label ini yang menjelaskan kenapa pertanyaan yang
- * mirip mendapat jawaban -- atau penolakan -- yang berbeda.
+ * Gelembung pertanyaan tanpa label, seperti widget Glide. Nama dan `unit`
+ * tujuannya hanya untuk pembaca layar (`.name` disembunyikan di CSS); bagi
+ * yang melihat, pergantian topik sudah tampak sebagai gelembung nama topik
+ * dan balasannya di percakapan.
  */
 export function UserMessage({ text, unit }: { text: string; unit: string | null }) {
   return (
     <div className={cx(styles.msg, styles.msgUser)}>
       <div className={styles.name}>
         Anda
-        {unit && <span className={styles.scopeTag}> · ke {unit}</span>}
+        {unit && ` · ke ${unit}`}
       </div>
       <div className={styles.text}>{text}</div>
     </div>
@@ -50,19 +51,27 @@ export function BotBubble({
   tone,
   children,
   extra,
+  meta = true,
 }: {
   tone?: "pending" | "error" | "refusal" | "support"
   children: React.ReactNode
   extra?: React.ReactNode
+  /**
+   * Keterangan "Asisten · AI" di bawah gelembung. Di percakapan hanya balasan
+   * terakhir yang memakainya, seperti di Glide (chat-panel.tsx).
+   */
+  meta?: boolean
 }) {
   return (
     <div className={styles.msg}>
       <div className={styles.name}>Asisten</div>
       <div className={cx(styles.text, tone && styles[tone])}>{children}</div>
       {/* Pembaca layar sudah mendengar nama "Asisten" di atas gelembung. */}
-      <p className={styles.meta} aria-hidden>
-        Asisten · AI
-      </p>
+      {meta && (
+        <p className={styles.meta} aria-hidden>
+          Asisten · AI
+        </p>
+      )}
       {extra}
     </div>
   )
@@ -72,15 +81,18 @@ export function AssistantMessage({
   entry,
   controls,
   showEscalation,
+  meta,
 }: {
   entry: AssistantEntry
   controls: FeedbackControls
   /** false bila jawaban setelah ini sudah membawa banner kontak yang sama. */
   showEscalation: boolean
+  /** Lihat `BotBubble`: true hanya untuk balasan terakhir. */
+  meta: boolean
 }) {
   if (entry.state === "pending") {
     return (
-      <BotBubble tone="pending">
+      <BotBubble tone="pending" meta={meta}>
         <span className={styles.dots} aria-hidden>
           <span />
           <span />
@@ -96,7 +108,7 @@ export function AssistantMessage({
   // yang dibutuhkan penilaian memang baru tiba bersama event penutup.
   if (entry.state === "streaming") {
     return (
-      <BotBubble>
+      <BotBubble meta={meta}>
         <RichText text={entry.text} />
         <span className={styles.caret} aria-hidden />
         <span className="sr-only">Jawaban sedang ditulis</span>
@@ -105,12 +117,16 @@ export function AssistantMessage({
   }
 
   if (entry.state === "error") {
-    return <BotBubble tone="error">{entry.message}</BotBubble>
+    return (
+      <BotBubble tone="error" meta={meta}>
+        {entry.message}
+      </BotBubble>
+    )
   }
 
   if (entry.state === "cancelled") {
     return (
-      <BotBubble tone="pending">
+      <BotBubble tone="pending" meta={meta}>
         Jawaban dihentikan. Kirim ulang pertanyaan bila masih diperlukan.
       </BotBubble>
     )
@@ -129,7 +145,7 @@ export function AssistantMessage({
   if (response.kind === "refusal" || response.kind === "support") {
     const refusal = response.kind === "refusal"
     return (
-      <BotBubble tone={response.kind} extra={feedback}>
+      <BotBubble tone={response.kind} extra={feedback} meta={meta}>
         <span className={styles.label}>
           {refusal ? <FaExclamationTriangle aria-hidden /> : <FaHandHoldingHeart aria-hidden />}
           {refusal ? "Tidak ditemukan di dokumen resmi" : "Ada yang siap membantu"}
@@ -141,6 +157,7 @@ export function AssistantMessage({
 
   return (
     <BotBubble
+      meta={meta}
       extra={
         <>
           {!complete && (
