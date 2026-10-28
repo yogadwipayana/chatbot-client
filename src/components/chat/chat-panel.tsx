@@ -317,7 +317,12 @@ export function ChatPanel({
       {/* `aria-busy` menahan pembacaan selagi jawaban mengalir: tanpa itu
           pembaca layar mengulang kalimat yang sama setiap satu potongan
           tiba, dan jawabannya tidak pernah terbaca utuh. */}
-      <div ref={listRef} className={styles.messages} aria-live="polite" aria-busy={busy}>
+      <div
+        ref={listRef}
+        className={cx(styles.messages, bolehMengetik && styles.messagesFloat)}
+        aria-live="polite"
+        aria-busy={busy}
+      >
         <BotBubble meta={balasanTerakhir === undefined}>
           <strong className={styles.greeting}>Hai, Civitas INSTIKI!</strong>
           {"Apa yang ingin Anda tanyakan?\n"}
@@ -366,7 +371,8 @@ export function ChatPanel({
         {sudahMemilih && menuTerbuka && menu}
       </div>
 
-      <footer className={styles.footer}>
+      {/* Kotak pertanyaan melayang di atas dasar percakapan (`footerFloat`). */}
+      <footer className={cx(styles.footer, bolehMengetik && styles.footerFloat)}>
         {bolehMengetik ? (
           // Satu kotak seperti composer Fin di Glide (docs/glide.md, gambar
           // 16), dengan tombol kirim di dalamnya. Hanya teks yang bisa
