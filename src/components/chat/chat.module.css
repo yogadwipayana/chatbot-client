@@ -15,28 +15,56 @@
 
 /* --- Tombol pembuka ------------------------------------------------------ */
 
+/* Bulat berisi ikon saja, seperti tombol widget Glide; teks "Tanya Asisten"
+   hanya untuk pembaca layar. */
 .launcher {
   position: fixed;
   right: 20px;
   bottom: 20px;
   z-index: 1040;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: grid;
+  place-items: center;
+  width: 48px;
   height: 48px;
-  padding: 0 20px;
+  padding: 0;
   border: 0;
-  border-radius: 24px;
+  border-radius: 50%;
   background: linear-gradient(135deg, var(--red), var(--red-darker));
   color: #fff;
-  font-size: 15px;
-  font-weight: 600;
   box-shadow: 0 6px 18px rgba(194, 51, 33, 0.35);
   transition: box-shadow 0.15s, transform 0.15s;
 }
 
 .launcher svg {
   font-size: 18px;
+}
+
+/* Logo dan chevron bertumpuk di sel yang sama. Saat dibuka logonya berputar
+   keluar searah jarum jam sambil mengecil dan memudar, dan chevron menyusul
+   masuk dengan putaran yang sama; saat ditutup gerakannya berbalik. */
+.launcherIcon {
+  display: grid;
+  grid-area: 1 / 1;
+  place-items: center;
+  transition: opacity 0.2s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.launcherChevron,
+.launcherOpen .launcherLogo {
+  opacity: 0;
+}
+
+.launcherChevron {
+  transform: rotate(-90deg) scale(0.4);
+}
+
+.launcherOpen .launcherLogo {
+  transform: rotate(90deg) scale(0.4);
+}
+
+.launcherOpen .launcherChevron {
+  opacity: 1;
+  transform: none;
 }
 
 .launcher:hover {
@@ -59,7 +87,32 @@
   border-radius: var(--chat-radius);
   background: var(--chat-bg);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
-  transition: width 0.2s ease;
+  /* Muncul dari arah tombol pembuka: naik sedikit sambil membesar dan memudar
+     masuk (@starting-style di bawah). `display` ikut ditransisikan
+     (allow-discrete) supaya panel tetap terlihat selama animasi menghilangnya;
+     peramban lama melewatinya dan panelnya langsung muncul/hilang. */
+  transform-origin: bottom right;
+  transition-property: width, opacity, transform, display;
+  transition-duration: 0.2s, 0.25s, 0.25s, 0.25s;
+  transition-timing-function: ease, ease-out, cubic-bezier(0.2, 0.8, 0.2, 1), linear;
+  transition-behavior: allow-discrete;
+}
+
+/* Menghilang ke arah tombol, sedikit lebih cepat dari munculnya. Selama itu
+   panelnya sudah tidak bisa diklik. */
+.panel[hidden] {
+  opacity: 0;
+  transform: translateY(16px) scale(0.95);
+  pointer-events: none;
+  transition-duration: 0.2s, 0.18s, 0.18s, 0.18s;
+  transition-timing-function: ease, ease-in, ease-in, linear;
+}
+
+@starting-style {
+  .panel {
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+  }
 }
 
 /* "Perluas jendela" di menu ⋯, seperti widget Glide yang melebar dari ~400 ke
@@ -84,6 +137,19 @@
 .panel[hidden],
 .embedded[hidden] {
   display: none;
+}
+
+/* Di dalam iframe `embed.js` panel ini ikut disembunyikan saat bingkainya
+   ditutup. Hilangnya ditunda sampai animasi menghilang bingkai itu (0.18s,
+   `.frame` di public/embed.js) selesai; tanpanya bingkai memudar dalam keadaan
+   kosong. Munculnya tetap seketika: penundaan hanya berlaku ke arah `hidden`.
+   Ditulis per properti, bukan shorthand `transition`: pipeline CSS Next
+   menggabungkan shorthand + `transition-behavior` dan membuang allow-discrete. */
+.embedded[hidden] {
+  transition-property: display;
+  transition-duration: 0s;
+  transition-delay: 0.2s;
+  transition-behavior: allow-discrete;
 }
 
 .header {
@@ -313,6 +379,40 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+}
+
+/* Scrollbar percakapan dan kotak pertanyaan: batang tipis membulat tanpa
+   tombol panah atas-bawah scrollbar klasik Windows -- di Chrome tetap ada
+   panahnya walau `scrollbar-width: thin`. `scrollbar-width` hanya untuk
+   peramban tanpa ::-webkit-scrollbar (Firefox): Chrome 121+ mengabaikan
+   ::-webkit-scrollbar begitu `scrollbar-width` atau `scrollbar-color` diisi. */
+.messages::-webkit-scrollbar,
+.input::-webkit-scrollbar {
+  width: 6px;
+}
+
+.messages::-webkit-scrollbar-track,
+.input::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messages::-webkit-scrollbar-thumb,
+.input::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.messages::-webkit-scrollbar-thumb:hover,
+.input::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .messages,
+  .input {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.25) transparent;
+  }
 }
 
 /* --- Pesan -------------------------------------------------------------- */
@@ -970,16 +1070,11 @@
 
 /* --- Kotak pertanyaan ---------------------------------------------------- */
 
+/* Tanpa garis pemisah dan latar sendiri: dasar panel menyatu dengan
+   percakapan seperti widget Glide, dan yang menonjol hanya kotak pertanyaan
+   putih berbingkai di dalamnya. */
 .footer {
-  border-top: 1px solid var(--chat-line);
-  background: #fff;
-}
-
-/* Belum ada kotak pertanyaan: tanpa garis dan latar putih, dasar panel
-   menyatu dengan percakapan seperti layar pilihan awal Glide. */
-.footerBare {
-  border-top: 0;
-  background: transparent;
+  flex: none;
 }
 
 /* Lingkup pencarian yang sedang berlaku, beserta tombol menggantinya: menu
@@ -1033,58 +1128,90 @@
   color: var(--red);
 }
 
-/* Kotaknya tumbuh ke atas, jadi tombol kirim tetap sejajar baris terakhir. */
-.form {
+/* Composer bergaya Fin di Glide (docs/glide.md, gambar 16): satu kotak
+   berbingkai dengan tombol kirim di dalamnya. Tanpa deretan alat di bawah
+   teks seperti Glide -- hanya teks yang bisa dikirim -- jadi tombolnya duduk di
+   kanan teks dan kotaknya cukup setinggi satu baris. Kotaknya tumbuh ke atas
+   bersama teksnya, dan tombolnya tetap di pojok kanan bawah. */
+.composer {
   display: flex;
   align-items: flex-end;
-  gap: 8px;
-  padding: 10px 12px 2px;
+  margin: 10px 12px 6px;
+  border: 1px solid #d6d9df;
+  border-radius: 16px;
+  background: #fff;
+  cursor: text;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+/* Fokusnya ditandai kotaknya, bukan textarea di dalamnya. */
+.composer:focus-within {
+  border-color: #f1b5ad;
+  box-shadow: 0 0 0 3px rgba(221, 75, 57, 0.1);
 }
 
 .input {
+  display: block;
   flex: 1;
   min-width: 0;
   /* Tingginya diatur chat-panel.tsx mengikuti isi; ini batas atasnya --
      kira-kira lima baris, sesudah itu isinya yang bergulir supaya kotak
      pertanyaan tidak pernah menelan seluruh percakapan di atasnya. */
   max-height: 124px;
-  padding: 9px 16px;
-  border: 1px solid transparent;
-  border-radius: 20px;
-  background: var(--chat-bg);
+  /* Satu baris (20px) + 24px = 44px, sama dengan tombol kirim + jaraknya. */
+  padding: 12px 4px 12px 16px;
+  border: 0;
+  border-radius: 16px 0 0 16px;
+  background: transparent;
+  color: var(--text);
   font-size: 14px;
-  line-height: 1.43;
+  /* Piksel bulat, bukan 1.43 (= 20,02px): isi satu baris jadi 44,02px di
+     kotak setinggi 44px, dan luapan 0,02px itu memunculkan scrollbar. */
+  line-height: 20px;
   resize: none;
+  /* chat-panel.tsx mematikannya selama isinya belum melewati max-height.
+     Gaya scrollbar-nya bersama `.messages` di atas. */
   overflow-y: auto;
-  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.input::placeholder {
+  color: var(--muted);
 }
 
 .input:focus {
-  border-color: #f1b5ad;
-  background: #fff;
   outline: none;
+}
+
+.composerAction {
+  display: flex;
+  flex: none;
+  padding: 6px;
 }
 
 .send {
   display: grid;
   flex: none;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border: 0;
   border-radius: 50%;
   background: var(--red);
   color: #fff;
-  font-size: 15px;
-  transition: background-color 0.15s;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
 }
 
 .send:hover:not(:disabled) {
   background: var(--red-darker);
 }
 
+/* Seperti Glide: selagi kotaknya kosong tombolnya abu, baru merah setelah
+   ada yang bisa dikirim. */
 .send:disabled {
-  background: #f0a79e;
+  background: var(--chat-line);
+  color: #9a9fa8;
   cursor: not-allowed;
 }
 
@@ -1104,22 +1231,6 @@
   text-align: center;
 }
 
-.counter {
-  margin: 0;
-  padding: 0 16px 2px;
-  font-size: 11px;
-  color: var(--muted);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Sudah mentok: tanpa penanda ini kotak yang berhenti menerima huruf terbaca
-   sebagai macet, bukan sebagai batas yang tercapai. */
-.counterFull {
-  color: var(--red);
-  font-weight: 600;
-}
-
 .disclaimer {
   margin: 0;
   padding: 2px 12px 10px;
@@ -1129,21 +1240,6 @@
 }
 
 @media (max-width: 575px) {
-  .launcher {
-    width: 48px;
-    padding: 0;
-    justify-content: center;
-  }
-
-  .launcherLabel {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-  }
-
   .panel,
   .panel.panelWide {
     right: 10px;
@@ -1161,6 +1257,7 @@
   }
 
   .launcher,
+  .launcherIcon,
   .topic,
   .panel,
   .searchBox {

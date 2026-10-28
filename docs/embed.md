@@ -35,8 +35,8 @@ Contoh yang bisa langsung dijalankan: [`index.html`](index.html) — lihat
    ```
 
    `style-src` tidak perlu diubah.
-4. Muat ulang halaman. Tombol merah **Tanya Asisten** muncul di pojok kanan
-   bawah.
+4. Muat ulang halaman. Tombol bulat merah berlogo asisten muncul di pojok
+   kanan bawah.
 
 Pengunjung mendapat asisten yang sama persis dengan widget di portal: jawaban
 yang mengalir, sumber PDF yang bisa diklik, banner eskalasi, 👍/👎 beserta
@@ -264,7 +264,7 @@ cd client/docs && python -m http.server 5500
 
 Buat kunci di dashboard admin → **Sematan**, dengan `http://localhost:5500`
 di daftar domainnya (atau biarkan kosong). Lalu buka
-`http://localhost:5500/?key=emb_...` dan tekan **Tanya Asisten**. Halaman contoh
+`http://localhost:5500/?key=emb_...` dan tekan tombol bulat berlogo asisten. Halaman contoh
 memasang baris `<script>` dari `?key=` itu; alamat portal di `index.html` ditulis
 `http://localhost:3001`, ganti bila portal berjalan di tempat lain.
 

@@ -5,7 +5,7 @@ Logo dipakai di empat tempat:
 - **Ikon tab peramban** admin dan client: `src/app/icon.svg` dan `src/app/favicon.ico` di masing-masing app. Next.js memasangnya otomatis.
 - **Logo admin** (sidebar dan halaman login `/masuk`, termasuk kepala widget contoh di sebelah formulir): komponen `AppLogo` di `admin/src/components/layout/app-logo.tsx`.
 - **Logo widget chatbot** (kepala panel di portal dan di `/embed`): komponen `ChatLogo` di `client/src/components/chat/chat-logo.tsx`, sejak `balon-bayangan`.
-- **Tombol pembuka widget** ("Tanya Asisten"): `ChatLogo` ukuran 24 di tombol portal, dan salinannya (`BALON` + `IKON_BUKA`) di `client/public/embed.js` untuk situs penyemat, karena berkas itu tanpa build step dan tidak bisa mengimpor komponen.
+- **Tombol pembuka widget** (bulat, ikon saja): `ChatLogo` ukuran 24 di tombol portal, dan salinannya (`BALON` + `IKON_BUKA`) di `client/public/embed.js` untuk situs penyemat, karena berkas itu tanpa build step dan tidak bisa mengimpor komponen.
 
 Semua logo hitam putih (keputusan user 2026-10-23). File `.svg` berganti warna sendiri saat peramban memakai mode gelap. File `.ico` adalah cadangan untuk peramban lama dan tidak punya mode gelap. Logo di sidebar memakai warna `primary` tema, jadi ikut terbalik di mode gelap.
 

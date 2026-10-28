@@ -1,9 +1,10 @@
 "use client"
 
 import { useState, useSyncExternalStore } from "react"
-import { FaTimes } from "react-icons/fa"
+import { FaChevronDown } from "react-icons/fa"
 
 import { nimLoginSads } from "@/lib/sads"
+import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
 import { ChatLogo } from "./chat-logo"
@@ -40,13 +41,23 @@ export function ChatWidget() {
 
       <button
         type="button"
-        className={styles.launcher}
+        className={cx(styles.launcher, open && styles.launcherOpen)}
         onClick={toggle}
         aria-expanded={open}
         aria-controls={PANEL_ID}
       >
-        {open ? <FaTimes aria-hidden /> : <ChatLogo size={24} />}
-        <span className={styles.launcherLabel}>{open ? "Tutup" : "Tanya Asisten"}</span>
+        {/* Terbuka: panah ke bawah, seperti tombol widget Glide -- panelnya
+            "turun" kembali ke tombol ini. ✕ tetap ada di kepala panel.
+            Keduanya selalu terpasang dan bertumpuk, supaya pergantiannya
+            bisa dianimasikan (chat.module.css). */}
+        <span className={cx(styles.launcherIcon, styles.launcherLogo)} aria-hidden>
+          <ChatLogo size={24} />
+        </span>
+        <span className={cx(styles.launcherIcon, styles.launcherChevron)} aria-hidden>
+          <FaChevronDown />
+        </span>
+        {/* Tombolnya hanya ikon; namanya tetap ada untuk pembaca layar. */}
+        <span className="sr-only">{open ? "Tutup" : "Tanya Asisten"}</span>
       </button>
     </>
   )

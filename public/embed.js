@@ -3,7 +3,7 @@
  *
  *   <script src="https://<domain-portal>/embed.js" data-key="emb_..." async></script>
  *
- * Satu baris itu memasang tombol "Tanya Asisten" di pojok kanan bawah. Panelnya
+ * Satu baris itu memasang tombol bulat berlogo asisten di pojok kanan bawah. Panelnya
  * adalah halaman /embed milik portal yang dimuat dalam iframe, jadi situs
  * penyemat tidak menyalin desain dan tidak memanggil API sendiri: permintaan ke
  * API berangkat dari asal portal, yang sudah terdaftar di CORS_ORIGINS API.
@@ -59,10 +59,10 @@
     `<path fill="#fff" stroke="#171717" stroke-width="2.4" stroke-linejoin="round" d="${BALON}"></path>` +
     `<path fill="none" stroke="#171717" stroke-width="2.4" stroke-linecap="round" d="M8.5 10.5h11M8.5 15h6.5"></path>` +
     `</svg>`
-  // Ikon FaTimes (react-icons), sama dengan tombol di portal.
+  // Ikon FaChevronDown (react-icons), sama dengan tombol di portal.
   const IKON_TUTUP = svg(
-    "0 0 352 512",
-    "M242.72 256l100.07-100.07c12.28-12.28 12.28-32.19 0-44.48l-22.24-22.24c-12.28-12.28-32.19-12.28-44.48 0L176 189.28 75.93 89.21c-12.28-12.28-32.19-12.28-44.48 0L9.21 111.45c-12.28 12.28-12.28 32.19 0 44.48L109.28 256 9.21 356.07c-12.28 12.28-12.28 32.19 0 44.48l22.24 22.24c12.28 12.28 32.2 12.28 44.48 0L176 322.72l100.07 100.07c12.28 12.28 32.2 12.28 44.48 0l22.24-22.24c12.28-12.28 12.28-32.19 0-44.48L242.72 256z"
+    "0 0 448 512",
+    "M207.029 381.476L12.686 187.132c-9.373-9.373-9.373-24.569 0-33.941l22.667-22.667c9.357-9.357 24.522-9.375 33.901-.04L224 284.505l154.745-154.021c9.379-9.335 24.544-9.317 33.901.04l22.667 22.667c9.373 9.373 9.373 24.569 0 33.941L240.971 381.476c-9.373 9.372-24.569 9.372-33.942 0z"
   )
 
   // Bukan <div>: aturan seperti `div { margin: ... }` milik situs penyemat
@@ -82,19 +82,20 @@
       all: initial;
     }
 
+    /* Bulat berisi ikon saja; teks .label hanya untuk pembaca layar. */
     .launcher {
       position: fixed;
       right: 20px;
       bottom: 20px;
       z-index: 2147483000;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+      display: grid;
+      place-items: center;
+      width: 46px;
       height: 46px;
       margin: 0;
-      padding: 0 18px;
+      padding: 0;
       border: 1px solid #d73925;
-      border-radius: 23px;
+      border-radius: 50%;
       background: #dd4b39;
       color: #fff;
       font: 600 15px/1 "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial,
@@ -126,6 +127,42 @@
       font-size: 24px;
     }
 
+    /* Sama dengan .launcherIcon di chat.module.css: logo dan chevron
+       bertumpuk, pergantiannya berputar searah jarum jam sambil memudar. */
+    .icon {
+      display: grid;
+      grid-area: 1 / 1;
+      place-items: center;
+      transition: opacity 0.2s ease, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .icon.tutup,
+    .launcher.open .icon.buka {
+      opacity: 0;
+    }
+
+    .icon.tutup {
+      transform: rotate(-90deg) scale(0.4);
+    }
+
+    .launcher.open .icon.buka {
+      transform: rotate(90deg) scale(0.4);
+    }
+
+    .launcher.open .icon.tutup {
+      opacity: 1;
+      transform: none;
+    }
+
+    .label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
+
     .frame {
       position: fixed;
       right: 20px;
@@ -137,7 +174,21 @@
       border-radius: 3px;
       background: #fff;
       box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
-      transition: width 0.2s ease;
+      /* Sama dengan .panel di chat.module.css: muncul dari arah tombol sambil
+         membesar dan memudar masuk; display ikut ditransisikan supaya bingkai
+         tetap terlihat selama animasi menghilangnya. */
+      transform-origin: bottom right;
+      transition-property: width, opacity, transform, display;
+      transition-duration: 0.2s, 0.25s, 0.25s, 0.25s;
+      transition-timing-function: ease, ease-out, cubic-bezier(0.2, 0.8, 0.2, 1), linear;
+      transition-behavior: allow-discrete;
+    }
+
+    @starting-style {
+      .frame {
+        opacity: 0;
+        transform: translateY(16px) scale(0.95);
+      }
     }
 
     /* "Perluas jendela" di menu panel (pesan asisten:perluas). */
@@ -145,8 +196,16 @@
       width: min(680px, calc(100vw - 40px));
     }
 
+    /* Panel di dalam iframe menunda hilangnya sedikit lebih lama dari ini
+       (.embedded[hidden] di chat.module.css), supaya bingkainya tidak memudar
+       dalam keadaan kosong. */
     .frame[hidden] {
       display: none;
+      opacity: 0;
+      transform: translateY(16px) scale(0.95);
+      pointer-events: none;
+      transition-duration: 0.2s, 0.18s, 0.18s, 0.18s;
+      transition-timing-function: ease, ease-in, ease-in, linear;
     }
 
     iframe {
@@ -157,21 +216,6 @@
     }
 
     @media (max-width: 575px) {
-      .launcher {
-        width: 46px;
-        padding: 0;
-        justify-content: center;
-      }
-
-      .label {
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
-      }
-
       .frame,
       .frame.luas {
         right: 10px;
@@ -184,6 +228,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       .launcher,
+      .icon,
       .frame {
         transition: none;
       }
@@ -193,20 +238,20 @@
   root.innerHTML = `
     <div class="frame" id="panel" hidden></div>
     <button type="button" class="launcher" aria-expanded="false" aria-controls="panel">
-      <span class="icon"></span><span class="label"></span>
+      <span class="icon buka">${IKON_BUKA}</span><span class="icon tutup">${IKON_TUTUP}</span><span class="label"></span>
     </button>
   `
 
   const frame = root.querySelector(".frame")
   const launcher = root.querySelector(".launcher")
-  const icon = root.querySelector(".icon")
   const label = root.querySelector(".label")
   let iframe = null
   let open = false
 
   function render() {
     launcher.setAttribute("aria-expanded", String(open))
-    icon.innerHTML = open ? IKON_TUTUP : IKON_BUKA
+    // Kedua ikon selalu terpasang; kelas ini yang menukar (dan menganimasikan) keduanya.
+    launcher.classList.toggle("open", open)
     label.textContent = open ? "Tutup" : "Tanya Asisten"
   }
 

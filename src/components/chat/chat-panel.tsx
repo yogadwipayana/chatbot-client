@@ -1,7 +1,7 @@
 "use client"
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import { FaExchangeAlt, FaPaperPlane, FaStop, FaTimes } from "react-icons/fa"
+import { FaArrowUp, FaExchangeAlt, FaStop, FaTimes } from "react-icons/fa"
 
 import {
   fetchFaqQuestions,
@@ -208,9 +208,17 @@ export function ChatPanel({
   useEffect(() => {
     const box = inputRef.current
     if (!box || !open) return
+    // Diukur tanpa scrollbar, supaya lebarnya -- dan jumlah barisnya -- tidak
+    // ikut berubah oleh scrollbar dari ukuran sebelumnya.
+    box.style.overflowY = "hidden"
     box.style.height = "auto"
     // `scrollHeight` tidak menghitung tepi, sedangkan tingginya border-box.
     box.style.height = `${box.scrollHeight + box.offsetHeight - box.clientHeight}px`
+    // Scrollbar hanya setelah `max-height` tercapai. Di bawahnya kotak sudah
+    // setinggi isinya, tetapi pembulatan subpiksel dapat menyisakan luapan
+    // sepersekian piksel, dan Chrome di Windows lalu menggambar scrollbar
+    // berpanah atas-bawah di kotak yang baru berisi satu baris.
+    if (box.scrollHeight > box.clientHeight + 1) box.style.overflowY = "auto"
   }, [draft, bolehMengetik, open])
 
   useEffect(() => {
@@ -352,9 +360,7 @@ export function ChatPanel({
         {sudahMemilih && menuTerbuka && menu}
       </div>
 
-      {/* Selama belum ada kotak pertanyaan, dasar panel menyatu dengan
-          percakapan: yang terlihat hanya pilihan di atasnya. */}
-      <footer className={cx(styles.footer, !bolehMengetik && styles.footerBare)}>
+      <footer className={styles.footer}>
         {sudahMemilih && (
           // Menu yang tersembunyi membuat lingkup pencarian ikut tak terlihat,
           // jadi topik yang sedang berlaku disebut di sini -- di sebelah satu-
@@ -376,11 +382,21 @@ export function ChatPanel({
           </div>
         )}
         {bolehMengetik ? (
+          // Satu kotak seperti composer Fin di Glide (docs/glide.md, gambar
+          // 16), dengan tombol kirim di dalamnya, di kanan teks. Hanya teks
+          // yang bisa dikirim, jadi tanpa tombol lampiran, emoji, atau suara.
+          // Seluruh kotaknya tampak sebagai tempat mengetik, jadi klik di
+          // mana pun selain tombolnya memindahkan fokus ke textarea.
           <form
-            className={styles.form}
+            className={styles.composer}
             onSubmit={(event) => {
               event.preventDefault()
               ask(draft)
+            }}
+            onClick={(event) => {
+              if (!(event.target as HTMLElement).closest("button, textarea")) {
+                inputRef.current?.focus()
+              }
             }}
           >
             <label htmlFor={`${PANEL_ID}-input`} className="sr-only">
@@ -400,34 +416,44 @@ export function ChatPanel({
                 event.preventDefault()
                 ask(draft)
               }}
-              placeholder={unit ? `Tulis pertanyaan seputar ${unit}…` : "Tulis pertanyaan…"}
+              // Singkat seperti composer Glide; topiknya sudah tertulis di
+              // atas kotak ("Topik: …").
+              placeholder="Pesan…"
               rows={1}
               maxLength={MAKS_KARAKTER}
               autoComplete="off"
               aria-describedby={`${PANEL_ID}-sisa`}
             />
-            {busy ? (
-              // Tempat yang sama dengan tombol kirim: selagi jawaban disusun,
-              // satu-satunya tindakan yang masuk akal adalah menghentikannya.
-              <button
-                type="button"
-                className={styles.send}
-                onClick={cancel}
-                aria-label="Hentikan jawaban"
-                title="Hentikan jawaban"
-              >
-                <FaStop aria-hidden />
-              </button>
-            ) : (
-              <button
-                type="submit"
-                className={styles.send}
-                disabled={!draft.trim()}
-                aria-label="Kirim pertanyaan"
-              >
-                <FaPaperPlane aria-hidden />
-              </button>
-            )}
+            {/* Batasnya tidak ditampilkan, tetapi tetap terbaca pembaca layar
+                saat kotaknya difokus (`aria-describedby`). */}
+            <p id={`${PANEL_ID}-sisa`} className="sr-only">
+              Maksimal {MAKS_KARAKTER} karakter.
+            </p>
+            <div className={styles.composerAction}>
+              {busy ? (
+                // Tempat yang sama dengan tombol kirim: selagi jawaban disusun,
+                // satu-satunya tindakan yang masuk akal adalah menghentikannya.
+                <button
+                  type="button"
+                  className={styles.send}
+                  onClick={cancel}
+                  aria-label="Hentikan jawaban"
+                  title="Hentikan jawaban"
+                >
+                  <FaStop aria-hidden />
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className={styles.send}
+                  disabled={!draft.trim()}
+                  aria-label="Kirim pertanyaan"
+                  title="Kirim pertanyaan"
+                >
+                  <FaArrowUp aria-hidden />
+                </button>
+              )}
+            </div>
           </form>
         ) : units === null ? (
           <p className={styles.composerHint}>Memuat topik…</p>
@@ -438,16 +464,6 @@ export function ChatPanel({
             {alasanTanpaNim(hasilNim)}
           </p>
         ) : null}
-        {bolehMengetik && (
-          // Terbaca pembaca layar saat kotaknya difokus (`aria-describedby`),
-          // jadi batasnya diketahui sebelum mengetik, bukan setelah mentok.
-          <p
-            id={`${PANEL_ID}-sisa`}
-            className={`${styles.counter} ${draft.length >= MAKS_KARAKTER ? styles.counterFull : ""}`}
-          >
-            {draft.length}/{MAKS_KARAKTER} karakter
-          </p>
-        )}
         <p className={styles.disclaimer}>Periksa sumbernya sebelum mengambil keputusan penting.</p>
       </footer>
     </section>
