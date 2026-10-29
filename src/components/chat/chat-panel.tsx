@@ -14,6 +14,7 @@ import { uraiNim, type HasilNim } from "@/lib/nim"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
+import { KonfirmasiBaru } from "./chat-confirm"
 import { ChatLogo } from "./chat-logo"
 import { MenuPanel } from "./chat-menu"
 import { AssistantMessage, BotBubble, UserMessage } from "./chat-message"
@@ -122,6 +123,11 @@ export function ChatPanel({
   const menuTombolRef = useRef<HTMLButtonElement>(null)
   const [luas, setLuas] = useState(false)
   const [cariTerbuka, setCariTerbuka] = useState(false)
+  // Dialog konfirmasi "Percakapan baru" (`chat-confirm.tsx`). Panel yang
+  // ditutup membatalkannya: dibuka lagi, panel tidak boleh langsung
+  // menanyakan sesuatu yang sudah tidak diingat mahasiswa.
+  const [konfirmasiBaru, setKonfirmasiBaru] = useState(false)
+  if (!open && konfirmasiBaru) setKonfirmasiBaru(false)
   // Pencarian diulang setiap kali isi percakapan berubah. Balasan topik ikut
   // berubah saat pertanyaan siap kliknya selesai dimuat.
   const isiPercakapan = useMemo(() => [entries, faq], [entries, faq])
@@ -250,10 +256,17 @@ export function ChatPanel({
     menuTombolRef.current?.focus()
   }
 
+  // Fokus kembali ke ⋯, asal dialognya, sebelum dialog dan tombolnya hilang.
+  function tutupKonfirmasi() {
+    setKonfirmasiBaru(false)
+    menuTombolRef.current?.focus()
+  }
+
   // Kembali ke sapaan dan menu topik, seperti panel yang baru dibuka. Draf,
   // menu topik yang terbuka, dan pencarian milik percakapan lama ikut hilang.
   // Bila ada menu topik, efek fokus di atas memindahkan fokus ke ubin pertamanya.
   function percakapanBaru() {
+    tutupKonfirmasi()
     reset()
     setDraft("")
     setMenuTerbuka(false)
@@ -287,7 +300,7 @@ export function ChatPanel({
           bisaDiperluas={expandable}
           onPerluas={gantiLuas}
           onCari={bukaPencarian}
-          onBaru={percakapanBaru}
+          onBaru={() => setKonfirmasiBaru(true)}
           baruNonaktif={entries.length === 0}
         />
         {onClose && (
@@ -477,6 +490,15 @@ export function ChatPanel({
         ) : null}
         <p className={styles.disclaimer}>Periksa sumbernya sebelum mengambil keputusan penting.</p>
       </footer>
+
+      {konfirmasiBaru && (
+        <KonfirmasiBaru
+          id={`${PANEL_ID}-baru`}
+          sibuk={busy}
+          onBatal={tutupKonfirmasi}
+          onSetuju={percakapanBaru}
+        />
+      )}
     </section>
   )
 }
