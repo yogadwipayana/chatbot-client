@@ -33,10 +33,3 @@ export function potongMarkdown(text: string): PotonganMarkdown[] {
   if (awal < text.length) hasil.push({ jenis: "teks", isi: text.slice(awal) })
   return hasil
 }
-
-/** Teks tanpa penanda, seperti yang terbaca di panel (untuk transkrip). */
-export function tanpaPenanda(text: string): string {
-  return potongMarkdown(text)
-    .map(({ jenis, isi }) => (jenis === "teks" || jenis === "kode" ? isi : tanpaPenanda(isi)))
-    .join("")
-}

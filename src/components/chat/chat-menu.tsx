@@ -1,13 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState, type RefObject } from "react"
-import {
-  FaCompressAlt,
-  FaEllipsisH,
-  FaExpandAlt,
-  FaRegArrowAltCircleDown,
-  FaSearch,
-} from "react-icons/fa"
+import { FaCompressAlt, FaEllipsisH, FaExpandAlt, FaRegEdit, FaSearch } from "react-icons/fa"
 
 import { cx } from "@/lib/utils"
 
@@ -15,7 +9,8 @@ import styles from "./chat.module.css"
 
 /**
  * Tombol ⋯ di kepala panel, di samping ✕, seperti widget Glide (docs/glide.md,
- * gambar 18): perluas jendela, cari percakapan, unduh transkrip.
+ * gambar 18): perluas jendela, cari percakapan, percakapan baru (di Glide:
+ * unduh transkrip).
  *
  * Pola menu tombol WAI-ARIA: panah atas/bawah berpindah pilihan, Escape
  * menutup menu dan mengembalikan fokus ke tombol ⋯ -- tanpa ikut menutup panel.
@@ -27,8 +22,8 @@ export function MenuPanel({
   bisaDiperluas,
   onPerluas,
   onCari,
-  onUnduh,
-  unduhNonaktif,
+  onBaru,
+  baruNonaktif,
 }: {
   id: string
   /** Tombol ⋯, supaya panel bisa mengembalikan fokus ke sana. */
@@ -38,9 +33,9 @@ export function MenuPanel({
   bisaDiperluas: boolean
   onPerluas: () => void
   onCari: () => void
-  onUnduh: () => void
-  /** Belum ada percakapan selain sapaan. */
-  unduhNonaktif: boolean
+  onBaru: () => void
+  /** Belum ada percakapan selain sapaan: tidak ada yang perlu dikosongkan. */
+  baruNonaktif: boolean
 }) {
   const [terbuka, setTerbuka] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -134,11 +129,11 @@ export function MenuPanel({
             type="button"
             role="menuitem"
             className={styles.menuItem}
-            onClick={() => pilih(onUnduh)}
-            disabled={unduhNonaktif}
+            onClick={() => pilih(onBaru)}
+            disabled={baruNonaktif}
           >
-            <FaRegArrowAltCircleDown aria-hidden />
-            Unduh transkrip
+            <FaRegEdit aria-hidden />
+            Percakapan baru
           </button>
         </div>
       )}

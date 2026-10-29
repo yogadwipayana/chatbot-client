@@ -21,6 +21,21 @@ export function getSessionId(): string {
   }
 }
 
+/**
+ * Ganti `session_id` untuk "Percakapan baru". Server merangkai pesan sesi yang
+ * sama sebagai satu percakapan selama jedanya di bawah 30 menit
+ * (`api/app/observability/chatlog.py`), jadi tanpa sesi baru percakapan yang
+ * baru dimulai tercatat menyambung percakapan lama di log admin.
+ */
+export function gantiSesi(): void {
+  cadangan = randomId()
+  try {
+    localStorage.setItem(STORAGE_KEY, cadangan)
+  } catch {
+    // localStorage diblokir: `getSessionId` memakai `cadangan`.
+  }
+}
+
 function randomId(): string {
   // `randomUUID` hanya ada di konteks aman; portal yang dibuka lewat IP LAN tidak.
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID()

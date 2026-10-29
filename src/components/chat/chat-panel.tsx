@@ -19,7 +19,6 @@ import { MenuPanel } from "./chat-menu"
 import { AssistantMessage, BotBubble, UserMessage } from "./chat-message"
 import { CariPercakapan } from "./chat-search"
 import { FaqQuestions, TopicMenu, topicReply } from "./topic-menu"
-import { namaBerkasTranskrip, susunTranskrip, unduhTeks } from "./transkrip"
 import { bannerEskalasiTerakhir, useChat } from "./use-chat"
 
 export const PANEL_ID = "asisten-administrasi"
@@ -108,7 +107,7 @@ export function ChatPanel({
   // Kunci yang belum ada = masih dimuat.
   const [faq, setFaq] = useState<Record<string, string[]>>({})
   const faqDiminta = useRef(new Set<string>())
-  const { entries, busy, send, cancel, feedback, unit, chooseTopic } = useChat(
+  const { entries, busy, send, cancel, feedback, unit, chooseTopic, reset } = useChat(
     embedKey,
     hasilNim.status === "sah" ? hasilNim.nim : null
   )
@@ -251,16 +250,14 @@ export function ChatPanel({
     menuTombolRef.current?.focus()
   }
 
-  function unduhTranskrip() {
-    const waktu = new Date()
-    const isi = susunTranskrip({
-      entries,
-      sapaan: `Hai, Civitas INSTIKI!\nApa yang ingin Anda tanyakan?\n${ajakan}`,
-      balasanTopik: (nama) => topicReply(nama, faq[nama]),
-      eskalasi: bannerEskalasi,
-      waktu,
-    })
-    unduhTeks(namaBerkasTranskrip(waktu), isi)
+  // Kembali ke sapaan dan menu topik, seperti panel yang baru dibuka. Draf,
+  // menu topik yang terbuka, dan pencarian milik percakapan lama ikut hilang.
+  // Bila ada menu topik, efek fokus di atas memindahkan fokus ke ubin pertamanya.
+  function percakapanBaru() {
+    reset()
+    setDraft("")
+    setMenuTerbuka(false)
+    setCariTerbuka(false)
   }
 
   return (
@@ -290,8 +287,8 @@ export function ChatPanel({
           bisaDiperluas={expandable}
           onPerluas={gantiLuas}
           onCari={bukaPencarian}
-          onUnduh={unduhTranskrip}
-          unduhNonaktif={entries.length === 0}
+          onBaru={percakapanBaru}
+          baruNonaktif={entries.length === 0}
         />
         {onClose && (
           <button

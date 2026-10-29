@@ -9,7 +9,7 @@ import {
   type StreamedReply,
   type Turn,
 } from "@/lib/api/chat"
-import { getSessionId } from "@/lib/session"
+import { gantiSesi, getSessionId } from "@/lib/session"
 
 export type ChatEntry =
   /** `unit`: unit yang dipilih saat pertanyaan ini dikirim; null = semua unit. */
@@ -212,7 +212,24 @@ export function useChat(embedKey?: string, nim: string | null = null) {
     setEntries((prev) => [...prev, { id, role: "topic", unit: pilihan }])
   }
 
-  return { entries, busy, send, cancel, feedback, unit, chooseTopic }
+  /**
+   * "Percakapan baru": kosongkan percakapan dan topiknya, dengan sesi baru.
+   * Jawaban yang masih disusun dihentikan dulu -- tanpa itu ia terus berjalan
+   * di server untuk percakapan yang sudah tidak tampil. Gelembungnya sudah
+   * hilang saat pembatalan itu tiba, jadi `replace` di `send` tidak menemukan
+   * apa-apa untuk diganti.
+   */
+  function reset() {
+    controller.current?.abort()
+    controller.current = null
+    gantiSesi()
+    setEntries([])
+    setUnit(null)
+    setRatings({})
+    setNotes({})
+  }
+
+  return { entries, busy, send, cancel, feedback, unit, chooseTopic, reset }
 }
 
 function tanpa<T>(record: Record<string, T>, key: string): Record<string, T> {
