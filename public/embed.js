@@ -90,24 +90,24 @@
       z-index: 2147483000;
       display: grid;
       place-items: center;
-      width: 46px;
-      height: 46px;
+      width: 48px;
+      height: 48px;
       margin: 0;
       padding: 0;
-      border: 1px solid #d73925;
+      border: 0;
       border-radius: 50%;
-      background: #dd4b39;
+      background: linear-gradient(135deg, #dd4b39, #c23321);
       color: #fff;
       font: 600 15px/1 "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial,
         sans-serif;
-      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+      box-shadow: 0 6px 18px rgba(194, 51, 33, 0.35);
       cursor: pointer;
-      transition: background-color 0.15s, box-shadow 0.15s;
+      transition: box-shadow 0.15s, transform 0.15s;
     }
 
     .launcher:hover {
-      background: #c23321;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+      box-shadow: 0 8px 22px rgba(194, 51, 33, 0.45);
+      transform: translateY(-1px);
     }
 
     .launcher:focus-visible {
@@ -166,14 +166,14 @@
     .frame {
       position: fixed;
       right: 20px;
-      bottom: 78px;
+      bottom: 80px;
       z-index: 2147483000;
-      width: 380px;
-      height: min(580px, calc(100dvh - 100px));
+      width: 390px;
+      height: min(620px, calc(100dvh - 104px));
       overflow: hidden;
-      border-radius: 3px;
-      background: #fff;
-      box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+      border-radius: 20px;
+      background: #f4f5f7;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
       /* Sama dengan .panel di chat.module.css: muncul dari arah tombol sambil
          membesar dan memudar masuk; display ikut ditransisikan supaya bingkai
          tetap terlihat selama animasi menghilangnya. */
@@ -220,9 +220,9 @@
       .frame.luas {
         right: 10px;
         left: 10px;
-        bottom: 76px;
+        bottom: 78px;
         width: auto;
-        height: calc(100dvh - 88px);
+        height: calc(100dvh - 90px);
       }
     }
 
@@ -231,6 +231,10 @@
       .icon,
       .frame {
         transition: none;
+      }
+
+      .launcher:hover {
+        transform: none;
       }
     }
   `)

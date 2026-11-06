@@ -4,7 +4,10 @@
    lunak dari AdminLTE supaya terbaca sebagai obrolan, bukan formulir.
    Tata letaknya meniru widget Intercom/Fin di Glide (docs/glide.md, gambar
    15): gelembung bulat tanpa avatar, pilihan berbentuk pil di dasar
-   percakapan. */
+   percakapan.
+   Ukuran, sudut, warna, dan bayangan .launcher dan .panel disalin ke .launcher
+   dan .frame di public/embed.js (CSS modul ini tidak sampai ke situs
+   penyemat): ubah keduanya bersamaan. */
 
 .panel,
 .embedded {
