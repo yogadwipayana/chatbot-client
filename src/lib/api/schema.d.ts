@@ -335,13 +335,54 @@ export interface paths {
         put?: never;
         /**
          * Login admin
-         * @description AD-1. Mengembalikan JWT berumur `ADMIN_TOKEN_TTL_MINUTES` (default 8 jam).
+         * @description AD-1. Mengembalikan JWT berumur `ADMIN_IDLE_TIMEOUT_MINUTES` (default 30
+         *     menit). Dashboard memperpanjangnya lewat `POST /api/admin/token/refresh`
+         *     selama admin berinteraksi, sampai paling lama `ADMIN_TOKEN_TTL_MINUTES`
+         *     (default 8 jam) sejak login. Token membawa `iss`, `aud`, dan `auth_time`
+         *     (waktu login); token tanpa klaim itu ditolak.
          *
          *     Balasan gagal sengaja tidak membedakan "email tidak terdaftar" dari
          *     "kata sandi salah", supaya tidak bisa dipakai memetakan siapa saja yang
-         *     punya akun admin.
+         *     punya akun admin. Setiap login berhasil, gagal, dan terkunci dicatat ke
+         *     log audit beserta IP-nya.
+         *
+         *     Setelah 10 kali gagal dalam 15 menit untuk satu email, dari IP mana pun,
+         *     email itu dikunci sementara (429 + `Retry-After`); login berhasil
+         *     mengosongkan hitungannya. Tidak dihitung per IP: IP kampus dipakai
+         *     bersama, dan tebakan satu orang tidak boleh mengunci admin lain.
+         *
+         *     Terpisah dari penguncian itu, jumlah permintaan login per IP dibatasi
+         *     `RATE_LIMIT_LOGIN_PER_IP` (bawaan 30/menit; `0` = mati) dan dijawab 429
+         *     + `Retry-After` selama beberapa detik, bukan dikunci: setiap percobaan
+         *     memaksa server menghitung bcrypt, juga untuk email yang tidak terdaftar.
          */
         post: operations["admin_login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/token/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Perpanjang token sesi dashboard
+         * @description Token baru untuk sesi yang sama, berumur `ADMIN_IDLE_TIMEOUT_MINUTES`.
+         *     Dipanggil dashboard selama admin masih berinteraksi, sehingga sesi
+         *     yang ditinggal berakhir sendiri. `auth_time` login aslinya ikut
+         *     terbawa: sesi tidak pernah melewati `ADMIN_TOKEN_TTL_MINUTES` sejak
+         *     login, berapa kali pun diperpanjang. Akun nonaktif, token yang terbit
+         *     sebelum kata sandi diganti, dan sesi yang sudah melewati batas umurnya
+         *     ditolak 401.
+         */
+        post: operations["refresh_token"];
         delete?: never;
         options?: never;
         head?: never;
@@ -645,6 +686,8 @@ export interface paths {
          *     Tidak tunduk pada kill switch (admin perlu mendiagnosis justru saat
          *     layanan dimatikan) dan TIDAK dicatat ke log percakapan, supaya uji coba
          *     tidak mencemari AD-4 maupun AD-5. LLM tetap dipanggil bila lolos ambang.
+         *     Karena itu dibatasi per akun dashboard (`RATE_LIMIT_PER_ADMIN`, bawaan
+         *     20/menit).
          */
         post: operations["admin_test_query"];
         delete?: never;
@@ -711,7 +754,7 @@ export interface paths {
          * Ringkasan performa pipeline chat
          * @description Dibaca dari SQLite log (`LOG_DB_PATH`), bukan Postgres. KPI giliran, p50/p95
          *     durasi per node LangGraph, distribusi titik keluar, dan tren per jam (UTC).
-         *     Untuk role admin, log `app.audit` tidak ikut dihitung di `error_log_count`.
+         *     Hanya superadmin: isinya alat debug (langkah pipeline, system prompt, log server).
          */
         get: operations["log_summary"];
         put?: never;
@@ -731,7 +774,9 @@ export interface paths {
         };
         /**
          * Daftar giliran chat
-         * @description Terbaru lebih dulu. Tanpa teks pertanyaan/jawaban; buka lewat `message_id`.
+         * @description Terbaru lebih dulu, termasuk giliran uji coba admin (`endpoint=uji_coba`). `question`
+         *     berisi teks pertanyaan bila LOG_NODE_IO menyala saat giliran itu berjalan
+         *     (pertanyaan sensitif FR-7 disamarkan); jawaban dan NIM ada di detail giliran.
          */
         get: operations["list_turns"];
         put?: never;
@@ -762,6 +807,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/logs/turns/{turn_id}/trace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Rekaman input/output satu giliran (tab Graf)
+         * @description State yang diterima dan dikembalikan setiap node, rute sesudahnya, dan pohon
+         *     panggilan di dalam node (LLM, retriever, tool, Laya) -- pengganti trace LangSmith.
+         *     404 bila giliran tidak ada, sudah lewat masa simpan, atau berjalan saat
+         *     LOG_NODE_IO mati. Waktu dan status node ada di `GET /api/admin/logs/turns/{turn_id}`.
+         */
+        get: operations["get_turn_trace"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/logs/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Node dan sisi pipeline chat
+         * @description Bentuk graf LangGraph (`get_graph(xray=True)`) untuk diagram tab Graf. Node di dalam
+         *     subgraph diberi `group` (mis. `cari` untuk rewrite dan retrieve).
+         */
+        get: operations["get_pipeline_graph"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/logs/app": {
         parameters: {
             query?: never;
@@ -771,8 +860,9 @@ export interface paths {
         };
         /**
          * Log aplikasi
-         * @description Log Python logger `app.*`. Log `app.audit` hanya untuk superadmin; role admin
-         *     yang memfilter `logger=app.audit` mendapat daftar kosong, bukan 403.
+         * @description Log Python logger `app.*`. Log `app.audit` tetap disaring per level: bila level
+         *     halaman Log kelak diturunkan, level di bawah superadmin yang memfilter
+         *     `logger=app.audit` mendapat daftar kosong, bukan 403.
          */
         get: operations["list_app_logs"];
         put?: never;
@@ -1160,6 +1250,9 @@ export interface components {
              *     penanya. BUKAN filter retrieval. NIM utuh dicatat di
              *     `messages.meta` bersama prodi dan angkatannya; untuk balasan
              *     `support` hanya NIM-nya (PRD §11).
+             *
+             *     Juga kunci batas laju utama (`RATE_LIMIT_PER_NIM`): satu jatah
+             *     per NIM, di tab, perangkat, dan jaringan mana pun.
              */
             nim: string;
         };
@@ -1475,6 +1568,14 @@ export interface components {
         UnansweredUpdate: {
             resolved: boolean;
         };
+        /**
+         * @description Alasan penolakan untuk admin. `no_documents` = ambang menolak tanpa satu pun
+         *     potongan ditemukan (unit belum punya dokumen yang dapat dicari);
+         *     `below_threshold` = potongan ditemukan tetapi skornya di bawah ambang;
+         *     `llm` = potongan lolos ambang, tetapi model AI menilai isinya tidak menjawab.
+         * @enum {string}
+         */
+        RefusalReason: "no_documents" | "below_threshold" | "llm";
         UnansweredGroup: {
             /**
              * @description Seluruh baris `unanswered_questions` dalam kelompok. Menandai kelompok selesai
@@ -1485,9 +1586,9 @@ export interface components {
             sample_question: string;
             count: number;
             /**
-             * @description Rata-rata skor tertinggi kelompok ini. Nilai yang mendekati ambang
-             *     menandakan dokumennya mungkin sudah ada tetapi retrieval-nya meleset;
-             *     nilai sangat rendah menandakan dokumennya memang belum ada.
+             * @description Rata-rata skor tertinggi kelompok ini. Tidak lagi ditampilkan dashboard:
+             *     dengan model e5 skornya hampir selalu 0,77-0,93, jadi tidak membedakan
+             *     apa pun. Pakai `refusal_reason`.
              */
             avg_top_score?: number | null;
             /** Format: date-time */
@@ -1499,6 +1600,21 @@ export interface components {
              *     memakai unit ini. Null bila pesan asalnya sudah terhapus dari log.
              */
             unit?: string | null;
+            /** @description Alasan penolakan `sample_question` (pertanyaan terbaru di kelompok). */
+            refusal_reason?: components["schemas"]["RefusalReason"] | null;
+        };
+        UnansweredPage: {
+            items: components["schemas"]["UnansweredGroup"][];
+            /** @description Jumlah kelompok yang cocok dengan seluruh filter, untuk penomoran halaman. */
+            total: number;
+            /** @description Jumlah pertanyaan di seluruh kelompok itu, bukan hanya di halaman ini. */
+            question_count: number;
+            /**
+             * @description `count` kelompok terbesar di seluruh halaman. Batang frekuensi diskalakan
+             *     terhadap angka ini, supaya kelompok kecil di halaman berikutnya tidak tampak
+             *     sama besar dengan kelompok terbesar.
+             */
+            max_count: number;
         };
         /** @description Satu penilaian FE-5 beserta pasangan pertanyaan-jawaban yang dinilai. */
         FeedbackItem: {
@@ -1534,6 +1650,8 @@ export interface components {
             top_score?: number | null;
             /** @description Unit yang dipilih mahasiswa saat bertanya (`messages.meta.unit`). */
             unit?: string | null;
+            /** @description Hanya untuk `kind = refusal`; null untuk jenis balasan lain. */
+            refusal_reason?: components["schemas"]["RefusalReason"] | null;
         };
         FeedbackPage: {
             items: components["schemas"]["FeedbackItem"][];
@@ -1652,6 +1770,8 @@ export interface components {
             latency_ms: number;
             /** @description Akar trace LangSmith untuk uji coba ini -- mencakup penulisan ulang query, retrieval, dan penyusunan jawaban sekaligus. Null bila tracing mati (LANGSMITH_TRACING=false atau LANGSMITH_API_KEY kosong). */
             langsmith_run_id?: string | null;
+            /** @description Giliran uji coba ini di halaman Log (jalur `uji_coba`), untuk membuka langkah dan panggilan LLM/tool-nya di tab Graf. Null bila log SQLite mati. */
+            turn_id?: string | null;
         };
         DailyVolume: {
             /** Format: date */
@@ -1702,7 +1822,11 @@ export interface components {
             /** @description Satu entri per hari dalam rentang, termasuk hari tanpa pertanyaan. */
             daily_volume: components["schemas"]["DailyVolume"][];
             top_topics: components["schemas"]["TopicCount"][];
-            /** @description Estimasi dari token terpakai, bukan dari API penagihan. */
+            /**
+             * @description Estimasi dari token terpakai, bukan dari API penagihan. LLM chat + embedding,
+             *     sama dengan total `GET /api/admin/costs`. Gerbang Laya tidak dihitung: ia
+             *     berjalan di Laya yang di-host sendiri.
+             */
             running_cost_usd: number;
             /**
              * @description Jawaban yang memanggil LLM tetapi modelnya belum punya tarif di
@@ -1827,9 +1951,9 @@ export interface components {
             turn_id: string;
             timestamp: string;
             /** @enum {string} */
-            endpoint: "chat" | "chat_stream";
+            endpoint: "chat" | "chat_stream" | "uji_coba";
             session_id: string | null;
-            /** @description Tautan ke `messages` di Postgres; teks percakapan hanya ada di sana. */
+            /** @description Tautan ke `messages` di Postgres. */
             message_id: string | null;
             unit: string | null;
             outcome: string | null;
@@ -1840,6 +1964,10 @@ export interface components {
             /** @enum {string} */
             status: "ok" | "error" | "dibatalkan";
             langsmith_run_id: string | null;
+            /** @description Teks pertanyaan; penanda samaran untuk FR-7. Null bila LOG_NODE_IO mati. */
+            question: string | null;
+            /** @description Ada rekaman input/output untuk tab Graf. */
+            has_trace: boolean;
         };
         TurnPage: {
             total: number;
@@ -1868,14 +1996,14 @@ export interface components {
             traceback: string | null;
             turn_id: string | null;
         };
-        /** @description TurnOut ditambah node dan log giliran itu. */
+        /** @description TurnOut ditambah NIM, jawaban, node, dan log giliran itu. */
         TurnDetail: {
             turn_id: string;
             timestamp: string;
             /** @enum {string} */
-            endpoint: "chat" | "chat_stream";
+            endpoint: "chat" | "chat_stream" | "uji_coba";
             session_id: string | null;
-            /** @description Tautan ke `messages` di Postgres; teks percakapan hanya ada di sana. */
+            /** @description Tautan ke `messages` di Postgres. */
             message_id: string | null;
             unit: string | null;
             outcome: string | null;
@@ -1886,9 +2014,75 @@ export interface components {
             /** @enum {string} */
             status: "ok" | "error" | "dibatalkan";
             langsmith_run_id: string | null;
+            /** @description Teks pertanyaan; penanda samaran untuk FR-7. Null bila LOG_NODE_IO mati. */
+            question: string | null;
+            /** @description Ada rekaman input/output untuk tab Graf. */
+            has_trace: boolean;
+            nim: string | null;
+            /** @description Jawaban yang dikirim; null bila gagal, dibatalkan, atau LOG_NODE_IO mati. */
+            answer: string | null;
             nodes: components["schemas"]["NodeRunOut"][];
             /** @description Log yang muncul selama giliran ini berjalan. */
             logs: components["schemas"]["AppLogOut"][];
+        };
+        NodeTrace: {
+            /** @description Sama dengan `NodeRunOut.position`. */
+            position: number;
+            node: string;
+            /** @description State yang diterima node. */
+            input?: unknown;
+            /** @description Perubahan state yang dikembalikan node; null bila node gagal. */
+            output?: unknown;
+            /** @description Keluaran router sesudah node: nama node berikutnya, daftar nama (paralel), atau `selesai`. Null bila node tidak diikuti sisi bersyarat. */
+            route?: unknown;
+        };
+        CallTrace: {
+            id: string;
+            /** @description Panggilan induk; null bila langsung di bawah node. */
+            parent_id: string | null;
+            /** @description Posisi node pemiliknya. */
+            position: number;
+            name: string;
+            /** @enum {string} */
+            kind: "llm" | "retriever" | "tool" | "laya" | "chain";
+            started_at: string;
+            duration_ms: number | null;
+            /** @enum {string} */
+            status: "ok" | "error" | "berjalan";
+            error: string | null;
+            model: string | null;
+            usage: {
+                [key: string]: unknown;
+            } | null;
+            cost_usd: number | null;
+            input?: unknown;
+            output?: unknown;
+        };
+        TurnTrace: {
+            turn_id: string;
+            /** @description Masukan graf: pertanyaan, riwayat, unit, profil. */
+            input?: unknown;
+            /** @description `outcome` akhir; null bila giliran gagal atau dibatalkan. */
+            output?: unknown;
+            nodes: components["schemas"]["NodeTrace"][];
+            calls: components["schemas"]["CallTrace"][];
+        };
+        GraphNode: {
+            /** @description Nama node (`node_runs.node`), atau `__start__`/`__end__`. */
+            id: string;
+            /** @description Subgraph pembungkusnya, mis. `cari`. */
+            group: string | null;
+        };
+        GraphEdge: {
+            source: string;
+            target: string;
+            conditional: boolean;
+            /** @description Nama cabang router, mis. `selesai`. */
+            label: string | null;
+        };
+        PipelineGraph: {
+            nodes: components["schemas"]["GraphNode"][];
+            edges: components["schemas"]["GraphEdge"][];
         };
         AppLogPage: {
             total: number;
@@ -2134,10 +2328,13 @@ export interface components {
             };
         };
         /**
-         * @description Melebihi batas laju (FR-9): per IP, per `X-Session-Id`, atau per kunci
-         *     sematan -- mana pun yang lebih dulu penuh (`RATE_LIMIT_*` di `.env`).
-         *     Permintaan yang ditolak tidak ikut menghabiskan jatah. Menilai jawaban
-         *     (`/api/feedback`) punya jatah sendiri, terpisah dari bertanya.
+         * @description Melebihi batas laju (FR-9): per NIM penanya (`RATE_LIMIT_PER_NIM`) atau
+         *     per IP (`RATE_LIMIT_PER_IP`, penahan skrip yang sengaja jauh di atas
+         *     beban kampus). Batas per `X-Session-Id` dan per kunci sematan hanya
+         *     berlaku bila dinyalakan di `.env` (bawaan mati) -- mana pun yang lebih
+         *     dulu penuh. Permintaan yang ditolak tidak ikut menghabiskan jatah.
+         *     Menilai jawaban (`/api/feedback`) punya jatah sendiri, terpisah dari
+         *     bertanya, dihitung atas NIM penanya jawaban yang dinilai.
          */
         RateLimited: {
             headers: {
@@ -2226,10 +2423,10 @@ export interface components {
     };
     parameters: {
         /**
-         * @description Pembatasan laju per sesi (FR-9). Bila tidak dikirim, sistem jatuh ke
-         *     pembatasan per IP -- yang di jaringan kampus dipakai bersama ratusan
-         *     mahasiswa, sehingga jauh lebih mudah kena batas. Kirimkan nilai yang
-         *     sama dengan `session_id` di body.
+         * @description Kunci batas laju per sesi (FR-9), yang mati secara bawaan: batas utama
+         *     dihitung per NIM di body. Tetap kirimkan nilai yang sama dengan
+         *     `session_id` di body, supaya batas per sesi berlaku bila dinyalakan
+         *     (`RATE_LIMIT_PER_SESSION`).
          */
         SessionIdHeader: string;
         /**
@@ -2254,10 +2451,10 @@ export interface operations {
             query?: never;
             header?: {
                 /**
-                 * @description Pembatasan laju per sesi (FR-9). Bila tidak dikirim, sistem jatuh ke
-                 *     pembatasan per IP -- yang di jaringan kampus dipakai bersama ratusan
-                 *     mahasiswa, sehingga jauh lebih mudah kena batas. Kirimkan nilai yang
-                 *     sama dengan `session_id` di body.
+                 * @description Kunci batas laju per sesi (FR-9), yang mati secara bawaan: batas utama
+                 *     dihitung per NIM di body. Tetap kirimkan nilai yang sama dengan
+                 *     `session_id` di body, supaya batas per sesi berlaku bila dinyalakan
+                 *     (`RATE_LIMIT_PER_SESSION`).
                  */
                 "X-Session-Id"?: components["parameters"]["SessionIdHeader"];
                 /**
@@ -2299,10 +2496,10 @@ export interface operations {
             query?: never;
             header?: {
                 /**
-                 * @description Pembatasan laju per sesi (FR-9). Bila tidak dikirim, sistem jatuh ke
-                 *     pembatasan per IP -- yang di jaringan kampus dipakai bersama ratusan
-                 *     mahasiswa, sehingga jauh lebih mudah kena batas. Kirimkan nilai yang
-                 *     sama dengan `session_id` di body.
+                 * @description Kunci batas laju per sesi (FR-9), yang mati secara bawaan: batas utama
+                 *     dihitung per NIM di body. Tetap kirimkan nilai yang sama dengan
+                 *     `session_id` di body, supaya batas per sesi berlaku bila dinyalakan
+                 *     (`RATE_LIMIT_PER_SESSION`).
                  */
                 "X-Session-Id"?: components["parameters"]["SessionIdHeader"];
                 /**
@@ -2363,10 +2560,10 @@ export interface operations {
             query?: never;
             header?: {
                 /**
-                 * @description Pembatasan laju per sesi (FR-9). Bila tidak dikirim, sistem jatuh ke
-                 *     pembatasan per IP -- yang di jaringan kampus dipakai bersama ratusan
-                 *     mahasiswa, sehingga jauh lebih mudah kena batas. Kirimkan nilai yang
-                 *     sama dengan `session_id` di body.
+                 * @description Kunci batas laju per sesi (FR-9), yang mati secara bawaan: batas utama
+                 *     dihitung per NIM di body. Tetap kirimkan nilai yang sama dengan
+                 *     `session_id` di body, supaya batas per sesi berlaku bila dinyalakan
+                 *     (`RATE_LIMIT_PER_SESSION`).
                  */
                 "X-Session-Id"?: components["parameters"]["SessionIdHeader"];
                 /**
@@ -2688,6 +2885,27 @@ export interface operations {
                 };
             };
             429: components["responses"]["RateLimited"];
+        };
+    };
+    refresh_token: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Token baru */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
         };
     };
     list_documents: {
@@ -3023,28 +3241,33 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Kelompok pertanyaan */
+            /** @description Satu halaman kelompok pertanyaan */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     /**
-                     * @example [
-                     *       {
-                     *         "ids": [
-                     *           "0b6f2c1e-3a4d-4e5f-9a8b-7c6d5e4f3a2b",
-                     *           "1c7a3d2f-4b5e-4f60-8b9c-8d7e6f5a4b3c"
-                     *         ],
-                     *         "sample_question": "Bagaimana cara mengurus surat keterangan lulus?",
-                     *         "count": 12,
-                     *         "avg_top_score": 0.21,
-                     *         "last_asked_at": "2026-09-09T14:22:11Z",
-                     *         "resolved": false
-                     *       }
-                     *     ]
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "ids": [
+                     *             "0b6f2c1e-3a4d-4e5f-9a8b-7c6d5e4f3a2b",
+                     *             "1c7a3d2f-4b5e-4f60-8b9c-8d7e6f5a4b3c"
+                     *           ],
+                     *           "sample_question": "Bagaimana cara mengurus surat keterangan lulus?",
+                     *           "count": 12,
+                     *           "avg_top_score": 0.21,
+                     *           "last_asked_at": "2026-09-09T14:22:11Z",
+                     *           "resolved": false
+                     *         }
+                     *       ],
+                     *       "total": 1,
+                     *       "question_count": 12,
+                     *       "max_count": 12
+                     *     }
                      */
-                    "application/json": components["schemas"]["UnansweredGroup"][];
+                    "application/json": components["schemas"]["UnansweredPage"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -3151,6 +3374,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
+            429: components["responses"]["RateLimited"];
             /**
              * @description Layanan AI gagal (LLM, gateway, atau embedding pertanyaan). `detail`
              *     berisi kalimat siap tampil yang menyarankan mencoba lagi; rinciannya
@@ -3277,6 +3501,8 @@ export interface operations {
                 status?: "ok" | "error" | "dibatalkan";
                 unit?: string;
                 last_node?: string;
+                /** @description Jalur giliran. `uji_coba` = kotak uji coba admin. */
+                endpoint?: "chat" | "chat_stream" | "uji_coba";
                 limit?: components["parameters"]["Limit"];
                 offset?: components["parameters"]["Offset"];
             };
@@ -3331,6 +3557,53 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    get_turn_trace: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                turn_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rekaman giliran */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnTrace"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    get_pipeline_graph: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Graf pipeline */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PipelineGraph"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     list_app_logs: {
@@ -3546,7 +3819,12 @@ export interface operations {
                     "application/json": components["schemas"]["TokenResponse"];
                 };
             };
-            /** @description Kata sandi lama salah, atau kata sandi baru sama dengan yang lama */
+            /**
+             * @description Kata sandi lama salah, kata sandi baru sama dengan yang lama, atau
+             *     kata sandi baru terlalu mudah ditebak (sandi umum, kata seperti
+             *     "instiki" atau "password" ditambah angka, urutan, pengulangan, atau
+             *     sebagian besar berisi email akun). `detail` menyebut alasannya.
+             */
             400: {
                 headers: {
                     [name: string]: unknown;
