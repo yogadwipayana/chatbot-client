@@ -1,7 +1,7 @@
 "use client"
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import { FaArrowUp, FaExchangeAlt, FaStop, FaTimes } from "react-icons/fa"
+import { FaArrowUp, FaExchangeAlt, FaLock, FaStop, FaTimes } from "react-icons/fa"
 
 import {
   fetchFaqQuestions,
@@ -58,6 +58,7 @@ export function ChatPanel({
   nimSads = null,
   expandable = false,
   onExpandChange,
+  cincinTopik = true,
 }: {
   open: boolean
   /** Tanpa ini tidak ada tombol tutup -- `/embed` yang dibuka sebagai halaman penuh. */
@@ -78,6 +79,11 @@ export function ChatPanel({
    * punya isian NIM, jadi tanpa login SADS tidak ada yang bisa ditanyakan.
    */
   nimSads?: string | null
+  /**
+   * false = ubin topik yang difokuskan tanpa cincin fokus. Hanya panel `/embed`
+   * (`embedded-chat.tsx`), selama ia dibuka dengan klik di situs penyemat.
+   */
+  cincinTopik?: boolean
 }) {
   const [draft, setDraft] = useState("")
   // Menu topik dibuka lagi lewat tombol "Ganti topik". Sembilan ubin yang
@@ -113,9 +119,9 @@ export function ChatPanel({
     hasilNim.status === "sah" ? hasilNim.nim : null
   )
   const bannerEskalasi = bannerEskalasiTerakhir(entries)
-  // "Asisten · AI" hanya di bawah balasan asisten terakhir -- sapaan selama
-  // belum ada balasan lain -- seperti "Fin • AI Agent" di widget Glide.
-  // Balasan topik ikut dihitung: gelembungnya juga gelembung asisten.
+  // "Asisten · AI" hanya di bawah balasan asisten terakhir, seperti
+  // "Fin • AI Agent" di widget Glide. Sambutan bukan balasan dan tidak
+  // memakainya. Balasan topik ikut dihitung: gelembungnya juga gelembung asisten.
   const balasanTerakhir = entries.findLast((entry) => entry.role !== "user")?.id
   const listRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
@@ -138,11 +144,9 @@ export function ChatPanel({
   const bolehMengetik = nimSah && (jumlahPilihan > 0 || (units !== null && units.length === 0))
   const sudahMemilih = adaTopik && jumlahPilihan > 0
 
-  // Satu menu saja, pindah tempat: di sapaan selagi belum ada topik, dan di
-  // dasar percakapan saat dibuka lagi -- di sana ia terlihat tanpa menggulir
-  // balik ke atas, tepat di atas kotak pertanyaan.
-  // Bentuknya meniru pilihan awal widget Glide (docs/glide.md): sapaan di
-  // atas, pilihan menempel di dasar percakapan, tepat di atas kotak pertanyaan.
+  // Satu menu saja, pindah tempat: tepat di bawah sambutan selagi belum ada
+  // topik, dan di dasar percakapan saat dibuka lagi -- di sana ia terlihat
+  // tanpa menggulir balik ke atas, tepat di atas kotak pertanyaan.
   const menu = adaTopik ? (
     <div className={styles.choices}>
       <TopicMenu
@@ -276,7 +280,11 @@ export function ChatPanel({
   return (
     <section
       id={PANEL_ID}
-      className={cx(className, expandable && luas && styles.panelWide)}
+      className={cx(
+        className,
+        expandable && luas && styles.panelWide,
+        !cincinTopik && styles.tanpaCincin
+      )}
       hidden={!open}
       // Dibuka sebagai halaman penuh ia bukan dialog di atas halaman lain.
       role={onClose ? "dialog" : undefined}
@@ -285,7 +293,7 @@ export function ChatPanel({
     >
       <header className={styles.header}>
         <span className={styles.headerAvatar} aria-hidden>
-          <ChatLogo />
+          <ChatLogo size={24} />
         </span>
         <div className={styles.heading}>
           <h2 id={`${PANEL_ID}-judul`} className={styles.title}>
@@ -333,11 +341,14 @@ export function ChatPanel({
         aria-live="polite"
         aria-busy={busy}
       >
-        <BotBubble meta={balasanTerakhir === undefined}>
-          <strong className={styles.greeting}>Hai, Civitas INSTIKI!</strong>
-          {"Apa yang ingin Anda tanyakan?\n"}
-          {ajakan}
-        </BotBubble>
+        {/* Sambutan, bukan gelembung: ia pembuka panel, dan menu topik tepat
+            di bawahnya -- tanpa celah kosong di antara keduanya. Asal
+            jawabannya (dokumen resmi) sudah tertulis di kepala panel, dan
+            "Asisten · AI" tetap menandai balasan asisten terakhir. */}
+        <div className={styles.welcome}>
+          <p className={styles.welcomeTitle}>Hai, Civitas INSTIKI! 👋</p>
+          <p className={styles.welcomeText}>Apa yang ingin Anda tanyakan? {ajakan}</p>
+        </div>
 
         {!sudahMemilih && menu}
 
@@ -480,11 +491,15 @@ export function ChatPanel({
             </div>
           </form>
         ) : units === null ? (
-          <p className={styles.composerHint}>Memuat topik…</p>
+          <p className={styles.composerHint}>
+            <span className={styles.spinner} aria-hidden />
+            Memuat topik…
+          </p>
         ) : hasilNim.status !== "sah" ? (
           // Tanpa isian NIM, hanya di sini mahasiswa tahu kenapa ubin topik
           // dan kotak pertanyaannya tidak dapat dipakai.
           <p className={styles.composerHint} role="status">
+            <FaLock aria-hidden />
             {alasanTanpaNim(hasilNim)}
           </p>
         ) : null}

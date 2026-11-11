@@ -90,29 +90,30 @@
       z-index: 2147483000;
       display: grid;
       place-items: center;
-      width: 48px;
-      height: 48px;
+      width: 52px;
+      height: 52px;
       margin: 0;
       padding: 0;
       border: 0;
       border-radius: 50%;
-      background: linear-gradient(135deg, #dd4b39, #c23321);
+      background: #dd4b39;
       color: #fff;
       font: 600 15px/1 "Source Sans 3", "Source Sans Pro", "Helvetica Neue", Helvetica, Arial,
         sans-serif;
-      box-shadow: 0 6px 18px rgba(194, 51, 33, 0.35);
+      box-shadow: 0 2px 6px rgba(16, 24, 40, 0.14), 0 8px 24px rgba(194, 51, 33, 0.3);
       cursor: pointer;
-      transition: box-shadow 0.15s, transform 0.15s;
+      transition: background-color 0.15s, box-shadow 0.2s, transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
     .launcher:hover {
-      box-shadow: 0 8px 22px rgba(194, 51, 33, 0.45);
-      transform: translateY(-1px);
+      background: #d73925;
+      box-shadow: 0 4px 10px rgba(16, 24, 40, 0.16), 0 12px 28px rgba(194, 51, 33, 0.36);
+      transform: scale(1.05);
     }
 
     .launcher:focus-visible {
-      outline: 2px solid #3c8dbc;
-      outline-offset: 2px;
+      outline: 3px solid rgba(221, 75, 57, 0.4);
+      outline-offset: 3px;
     }
 
     .launcher svg {
@@ -166,14 +167,15 @@
     .frame {
       position: fixed;
       right: 20px;
-      bottom: 80px;
+      bottom: 88px;
       z-index: 2147483000;
-      width: 390px;
-      height: min(620px, calc(100dvh - 104px));
+      width: 400px;
+      height: min(620px, calc(100dvh - 112px));
       overflow: hidden;
-      border-radius: 20px;
-      background: #f4f5f7;
-      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 0 0 1px rgba(16, 24, 40, 0.06), 0 8px 16px -4px rgba(16, 24, 40, 0.1),
+        0 24px 56px -8px rgba(16, 24, 40, 0.22);
       /* Sama dengan .panel di chat.module.css: muncul dari arah tombol sambil
          membesar dan memudar masuk; display ikut ditransisikan supaya bingkai
          tetap terlihat selama animasi menghilangnya. */
@@ -215,14 +217,21 @@
       border: 0;
     }
 
+    /* Layar sempit: panel menutupi seluruh layar dan tombolnya disembunyikan
+       selama panel terbuka; tombol tutup di kepala panel menutupnya (sama dengan
+       @media di chat.module.css). */
     @media (max-width: 575px) {
       .frame,
       .frame.luas {
-        right: 10px;
-        left: 10px;
-        bottom: 78px;
+        inset: 0;
         width: auto;
-        height: calc(100dvh - 90px);
+        height: auto;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .launcher.open {
+        display: none;
       }
     }
 
@@ -251,6 +260,9 @@
   const label = root.querySelector(".label")
   let iframe = null
   let open = false
+  // Panel terakhir dibuka lewat papan ketik (Enter/Spasi di tombol), bukan klik.
+  // Panel memakainya untuk cincin fokus ubin topik (embedded-chat.tsx).
+  let lewatPapanKetik = false
 
   function render() {
     launcher.setAttribute("aria-expanded", String(open))
@@ -259,9 +271,13 @@
     label.textContent = open ? "Tutup" : "Tanya Asisten"
   }
 
-  /** `dariPanel` = ditutup lewat tombol di dalam panel, yang sudah tahu sendiri. */
-  function setOpen(next, dariPanel) {
+  /**
+   * `dariPanel` = ditutup lewat tombol di dalam panel, yang sudah tahu sendiri.
+   * `papanKetik` = tombol pembuka ditekan lewat papan ketik.
+   */
+  function setOpen(next, dariPanel, papanKetik) {
     open = next
+    if (next) lewatPapanKetik = papanKetik === true
     // Portal baru dimuat saat tombolnya pertama kali ditekan: halaman penyemat
     // tidak ikut menanggung beratnya bagi pengunjung yang tidak bertanya apa-apa.
     if (next && !iframe) {
@@ -279,14 +295,15 @@
       // dibuang peramban karena asalnya belum cocok -- tidak apa-apa, halaman
       // itu memang mulai dalam keadaan terbuka.
       iframe.focus()
-      iframe.contentWindow.postMessage({ type: PESAN_BUKA }, ASAL)
+      iframe.contentWindow.postMessage({ type: PESAN_BUKA, papanKetik: lewatPapanKetik }, ASAL)
     } else {
       if (!dariPanel && iframe) iframe.contentWindow.postMessage({ type: PESAN_TUTUP }, ASAL)
       launcher.focus()
     }
   }
 
-  launcher.addEventListener("click", () => setOpen(!open, false))
+  // `detail` 0 = klik yang dipicu papan ketik (Enter/Spasi), bukan penunjuk.
+  launcher.addEventListener("click", (event) => setOpen(!open, false, event.detail === 0))
 
   window.addEventListener("message", (event) => {
     if (!iframe || event.source !== iframe.contentWindow || event.origin !== ASAL) return
@@ -296,6 +313,9 @@
     // yang dikirim saat iframe masih dimuat dibuang peramban.
     else if (type === PESAN_SIAP) {
       iframe.contentWindow.postMessage({ type: PESAN_IDENTITAS, nim: nimSads() }, ASAL)
+      // Pesan buka pertama terbuang selagi iframe dimuat: ulangi, supaya panel
+      // tahu cara ia dibuka.
+      if (open) iframe.contentWindow.postMessage({ type: PESAN_BUKA, papanKetik: lewatPapanKetik }, ASAL)
     }
     // Di layar sempit iframe-nya sudah selebar layar (media query di atas).
     else if (type === PESAN_PERLUAS) frame.classList.toggle("luas", event.data.luas === true)

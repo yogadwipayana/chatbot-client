@@ -56,6 +56,9 @@ Yang perlu diketahui pemilik situs:
 - **Selalu di atas.** Tombol dan panel memakai `z-index: 2147483000`. Widget
   lain di pojok kanan bawah (chat CS, tombol "kembali ke atas") akan tertutup;
   pindahkan widget tersebut.
+- **Layar penuh di ponsel.** Di layar ≤ 575 px panel menutupi seluruh layar
+  dan tombolnya disembunyikan selama panel terbuka; tombol tutup di kepala
+  panel mengembalikan halaman.
 - **Percakapan hilang saat pindah halaman**, sama seperti widget di portal:
   setiap halaman situs penyemat memuat panel baru.
 
@@ -173,7 +176,7 @@ sequenceDiagram
 
   | Pesan | Arah | Arti |
   |---|---|---|
-  | `{type: "asisten:buka"}` | situs → iframe | Panel ditampilkan lagi; fokus kembali ke kotak pertanyaan |
+  | `{type: "asisten:buka", papanKetik}` | situs → iframe | Panel ditampilkan lagi; fokus kembali ke kotak pertanyaan. `papanKetik` true bila tombol ditekan lewat papan ketik: hanya saat itu ubin topik yang difokuskan bercincin, sama dengan widget portal. Dikirim ulang setelah `asisten:siap`, karena yang pertama terbuang selagi iframe dimuat |
   | `{type: "asisten:tutup"}` | situs → iframe | Ditutup lewat tombol peluncur di situs |
   | `{type: "asisten:tutup"}` | iframe → situs | Ditutup lewat ✕ atau Escape di panel; situs menyembunyikan iframe dan mengembalikan fokus ke tombol |
   | `{type: "asisten:siap"}` | iframe → situs | Panel sudah bisa menerima pesan; minta NIM login SADS |

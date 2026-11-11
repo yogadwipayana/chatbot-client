@@ -38,17 +38,35 @@ export function EmbeddedChat({ widget, embedKey }: { widget: boolean; embedKey?:
   // Iframe baru dibuat saat tombolnya pertama kali ditekan, jadi mulai terbuka.
   const [open, setOpen] = useState(true)
   const [nimSads, setNimSads] = useState<string | null>(null)
+  // Cincin fokus ubin topik. Panel yang dibuka memfokuskan ubin pertama; di
+  // portal peramban hanya menggambar cincinnya bila tombol pembuka ditekan lewat
+  // papan ketik. Di iframe peramban tidak tahu cara tombol di situs penyemat
+  // ditekan dan selalu menggambarnya, jadi ubin pertama tampak sudah terpilih.
+  // Karena itu cincinnya disembunyikan sampai `embed.js` berkata panel dibuka
+  // lewat papan ketik, atau sampai ada tombol papan ketik ditekan di panel ini.
+  const [cincin, setCincin] = useState(false)
+
+  useEffect(() => {
+    function nyalakanCincin() {
+      setCincin(true)
+    }
+    window.addEventListener("keydown", nyalakanCincin)
+    return () => window.removeEventListener("keydown", nyalakanCincin)
+  }, [])
 
   useEffect(() => {
     if (!widget) return
     function onMessage(event: MessageEvent) {
       if (event.source !== window.parent) return
-      const data = event.data as { type?: unknown; nim?: unknown } | null
+      const data = event.data as { type?: unknown; nim?: unknown; papanKetik?: unknown } | null
       const type = data?.type
       // Ditutup lalu dibuka lagi lewat tombol di situs penyemat: kembalikan
-      // fokus ke kotak pertanyaan, seperti saat pertama dibuka.
-      if (type === PESAN_BUKA) setOpen(true)
-      else if (type === PESAN_TUTUP) setOpen(false)
+      // fokus ke kotak pertanyaan, seperti saat pertama dibuka. `embed.js`
+      // lama tidak mengirim `papanKetik`: dianggap klik.
+      if (type === PESAN_BUKA) {
+        setOpen(true)
+        setCincin(data?.papanKetik === true)
+      } else if (type === PESAN_TUTUP) setOpen(false)
       // Situs mana pun yang terdaftar untuk kunci ini bisa mengirimnya, jadi
       // nilainya tetap diperiksa `uraiNim` sebelum dipakai.
       else if (type === PESAN_IDENTITAS) setNimSads(bentukNim(data?.nim))
@@ -85,6 +103,7 @@ export function EmbeddedChat({ widget, embedKey }: { widget: boolean; embedKey?:
       // selebar layar.
       expandable={widget}
       onExpandChange={widget ? perluas : undefined}
+      cincinTopik={cincin}
     />
   )
 }
@@ -101,7 +120,7 @@ export function EmbedUnavailable({ status }: { status: "tidak-berlaku" | "gagal"
     <section className={styles.embedded} aria-labelledby="asisten-tidak-tersedia">
       <header className={styles.header}>
         <span className={styles.headerAvatar} aria-hidden>
-          <ChatLogo />
+          <ChatLogo size={24} />
         </span>
         <div className={styles.heading}>
           <h2 id="asisten-tidak-tersedia" className={styles.title}>

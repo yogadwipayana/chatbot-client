@@ -19,7 +19,7 @@ import { potongKontak } from "@/lib/kontak"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
-import { potongMarkdown } from "./markdown"
+import { potongBlok, potongMarkdown } from "./markdown"
 import type { ChatEntry, FeedbackControls, NoteState } from "./use-chat"
 
 type AssistantEntry = Extract<ChatEntry, { role: "assistant" }>
@@ -109,8 +109,7 @@ export function AssistantMessage({
   if (entry.state === "streaming") {
     return (
       <BotBubble meta={meta}>
-        <RichText text={entry.text} />
-        <span className={styles.caret} aria-hidden />
+        <RichText text={entry.text} ekor={<span className={styles.caret} aria-hidden />} />
         <span className="sr-only">Jawaban sedang ditulis</span>
       </BotBubble>
     )
@@ -186,15 +185,69 @@ export function AssistantMessage({
 const URL_HTTP = /https?:\/\/[^\s<>"'`]+/gi
 
 /**
- * Model kadang menulis penekanan Markdown: tebal (`**3 Agustus 2026**`),
- * miring (`*Artificial Intelligence*`), dan kode sebaris
- * (`` `TRANSFER NomorVA NOMINAL` ``); aturannya di `potongMarkdown`. URL
- * HTTP(S) juga ditautkan otomatis.
+ * Jawaban per blok (`potongBlok`): paragraf, daftar berbutir atau bernomor,
+ * dan judul `#`. Tanpa ini daftar tampil sebagai teks biasa, dan baris kedua
+ * butir yang panjang turun ke bawah nomornya, bukan ke bawah teksnya.
+ *
+ * `ekor` -- kursor jawaban yang masih mengalir -- ditaruh di ujung blok
+ * terakhir, bukan di baris baru di bawahnya.
  *
  * `tautKontak`: nomor telepon dijadikan tautan. Hanya untuk teks yang disusun
  * server dari daftar kontak (penolakan, dukungan), bukan jawaban LLM.
  */
-function RichText({ text, tautKontak = false }: { text: string; tautKontak?: boolean }) {
+function RichText({
+  text,
+  tautKontak = false,
+  ekor,
+}: {
+  text: string
+  tautKontak?: boolean
+  ekor?: React.ReactNode
+}) {
+  const daftarBlok = potongBlok(text)
+  if (daftarBlok.length === 0) return <>{ekor}</>
+  return (
+    <>
+      {daftarBlok.map((blok, index) => {
+        const ujung = index === daftarBlok.length - 1 ? ekor : null
+        if (blok.jenis !== "daftar") {
+          return (
+            <p
+              key={index}
+              className={blok.jenis === "judul" ? styles.subheading : styles.paragraph}
+            >
+              <Sebaris text={blok.teks} tautKontak={tautKontak} />
+              {ujung}
+            </p>
+          )
+        }
+        const butir = blok.butir.map((isi, nomor) => (
+          <li key={nomor}>
+            <Sebaris text={isi} tautKontak={tautKontak} />
+            {nomor === blok.butir.length - 1 && ujung}
+          </li>
+        ))
+        return blok.bernomor ? (
+          <ol key={index} className={styles.list} start={blok.mulai}>
+            {butir}
+          </ol>
+        ) : (
+          <ul key={index} className={styles.list}>
+            {butir}
+          </ul>
+        )
+      })}
+    </>
+  )
+}
+
+/**
+ * Isi satu blok. Model kadang menulis penekanan Markdown: tebal
+ * (`**3 Agustus 2026**`), miring (`*Artificial Intelligence*`), dan kode
+ * sebaris (`` `TRANSFER NomorVA NOMINAL` ``); aturannya di `potongMarkdown`.
+ * URL HTTP(S) juga ditautkan otomatis.
+ */
+function Sebaris({ text, tautKontak = false }: { text: string; tautKontak?: boolean }) {
   return (
     <>
       {potongMarkdown(text).map(({ jenis, isi }, index) =>
@@ -206,11 +259,11 @@ function RichText({ text, tautKontak = false }: { text: string; tautKontak?: boo
           </code>
         ) : jenis === "tebal" ? (
           <strong key={index}>
-            <RichText text={isi} />
+            <Sebaris text={isi} />
           </strong>
         ) : (
           <em key={index}>
-            <RichText text={isi} />
+            <Sebaris text={isi} />
           </em>
         )
       )}

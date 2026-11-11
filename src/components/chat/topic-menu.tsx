@@ -12,7 +12,10 @@ import styles from "./chat.module.css"
  *
  * Satu topik = satu unit layanan; pertanyaan berikutnya hanya dicari di dokumen
  * unit itu. Kotak pertanyaan baru muncul setelah salah satunya dipilih. Ubinnya
- * hanya nama unit -- ringkas, supaya seluruh daftar muat tanpa digulir.
+ * hanya nama unit, tanpa ikon atau emoji (keputusan user 2026-11-11), dalam
+ * kisi dua kolom -- ringkas, supaya seluruh daftar muat tanpa digulir.
+ * Keterangan unit (bila diisi admin) muncul sebagai tooltip; kebanyakan unit
+ * belum punya, jadi tidak ditulis di ubinnya.
  *
  * Setelah satu topik dipilih menunya disembunyikan ChatPanel -- sembilan ubin
  * yang menetap di atas percakapan mendorong jawaban keluar layar -- dan dibuka
@@ -46,6 +49,7 @@ export function TopicMenu({
             aria-pressed={aktif}
             onClick={() => onPick(unit.name)}
             disabled={disabled}
+            title={unit.description ?? undefined}
           >
             {unit.name}
           </button>

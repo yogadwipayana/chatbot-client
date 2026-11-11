@@ -1,7 +1,8 @@
 /**
  * Penanda Markdown yang dikenali di jawaban: tebal `**...**`, kode sebaris
- * `` `...` `` (format SMS, kode bank), dan miring `*...*`. Sisanya (judul `#`,
- * tautan `[..](..)`, sitasi `[Judul, hal. 12]`) tampil apa adanya.
+ * `` `...` `` (format SMS, kode bank), dan miring `*...*`. Paragraf, daftar,
+ * dan judul `#` dipisah lebih dulu oleh `potongBlok`. Sisanya (tautan
+ * `[..](..)`, sitasi `[Judul, hal. 12]`) tampil apa adanya.
  *
  * Miring mengikuti CommonMark versi ketat: satu baris, tanpa spasi tepat di
  * dalam bintang, dan di batas kata. Jadi `2*3*4`, butir `* teks`, dan
@@ -31,5 +32,72 @@ export function potongMarkdown(text: string): PotonganMarkdown[] {
     awal = posisi + penanda.length
   }
   if (awal < text.length) hasil.push({ jenis: "teks", isi: text.slice(awal) })
+  return hasil
+}
+
+export type BlokMarkdown =
+  | { jenis: "paragraf" | "judul"; teks: string }
+  | { jenis: "daftar"; bernomor: boolean; mulai: number; butir: string[] }
+
+/** `- teks`, `* teks`, `• teks`, `1. teks`, `1) teks`. Tahun (`2026. `) bukan nomor. */
+const BUTIR = /^\s*([-*•]|\d{1,3}[.)])\s+(.*)$/
+const JUDUL = /^\s*#{1,6}\s+(.*)$/
+
+/**
+ * Blok jawaban: paragraf (dipisah baris kosong), daftar berbutir atau
+ * bernomor, dan judul `#`. Isi tiap blok tetap diurai `potongMarkdown`.
+ *
+ * Butir yang dipisah baris kosong tetap satu daftar, dan baris menjorok tepat
+ * di bawah butir menjadi lanjutan butir itu. Baris biasa dalam satu paragraf
+ * digabung dengan "\n", jadi pergantian barisnya tetap tampil.
+ */
+export function potongBlok(text: string): BlokMarkdown[] {
+  const hasil: BlokMarkdown[] = []
+  let paragraf: string[] = []
+  // Baris sebelumnya butir daftar: baris menjorok berikutnya lanjutannya.
+  let lanjutButir = false
+
+  const tutupParagraf = () => {
+    if (paragraf.length > 0) hasil.push({ jenis: "paragraf", teks: paragraf.join("\n") })
+    paragraf = []
+  }
+
+  for (const baris of text.split("\n")) {
+    if (baris.trim() === "") {
+      tutupParagraf()
+      lanjutButir = false
+      continue
+    }
+    const butir = BUTIR.exec(baris)
+    if (butir) {
+      tutupParagraf()
+      const bernomor = /\d/.test(butir[1])
+      const akhir = hasil.at(-1)
+      if (akhir?.jenis === "daftar" && akhir.bernomor === bernomor) akhir.butir.push(butir[2])
+      else
+        hasil.push({
+          jenis: "daftar",
+          bernomor,
+          mulai: bernomor ? Number.parseInt(butir[1], 10) : 1,
+          butir: [butir[2]],
+        })
+      lanjutButir = true
+      continue
+    }
+    const akhir = hasil.at(-1)
+    if (lanjutButir && akhir?.jenis === "daftar" && /^\s{2,}/.test(baris)) {
+      akhir.butir[akhir.butir.length - 1] += `\n${baris.trim()}`
+      continue
+    }
+    lanjutButir = false
+    const judul = JUDUL.exec(baris)
+    if (judul) {
+      tutupParagraf()
+      hasil.push({ jenis: "judul", teks: judul[1] })
+      continue
+    }
+    paragraf.push(baris)
+  }
+  tutupParagraf()
   return hasil
 }
