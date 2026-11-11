@@ -1,7 +1,13 @@
 "use client"
 
 import { useEffect, useRef, useState, type RefObject } from "react"
-import { FaCompressAlt, FaEllipsisH, FaExpandAlt, FaRegEdit, FaSearch } from "react-icons/fa"
+import {
+  FiEdit,
+  FiMaximize2,
+  FiMinimize2,
+  FiMoreHorizontal,
+  FiSearch,
+} from "react-icons/fi"
 
 import { cx } from "@/lib/utils"
 
@@ -94,7 +100,7 @@ export function MenuPanel({
         aria-expanded={terbuka}
         aria-controls={terbuka ? id : undefined}
       >
-        <FaEllipsisH aria-hidden />
+        <FiMoreHorizontal aria-hidden />
       </button>
       {terbuka && (
         <div
@@ -112,7 +118,7 @@ export function MenuPanel({
               className={styles.menuItem}
               onClick={() => pilih(onPerluas)}
             >
-              {luas ? <FaCompressAlt aria-hidden /> : <FaExpandAlt aria-hidden />}
+              {luas ? <FiMinimize2 aria-hidden /> : <FiMaximize2 aria-hidden />}
               {luas ? "Ciutkan jendela" : "Perluas jendela"}
             </button>
           )}
@@ -122,7 +128,7 @@ export function MenuPanel({
             className={styles.menuItem}
             onClick={() => pilih(onCari)}
           >
-            <FaSearch aria-hidden />
+            <FiSearch aria-hidden />
             Cari percakapan
           </button>
           <button
@@ -132,7 +138,7 @@ export function MenuPanel({
             onClick={() => pilih(onBaru)}
             disabled={baruNonaktif}
           >
-            <FaRegEdit aria-hidden />
+            <FiEdit aria-hidden />
             Percakapan baru
           </button>
         </div>

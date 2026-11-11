@@ -1,6 +1,6 @@
 "use client"
 
-import { FaChevronRight } from "react-icons/fa"
+import { FiChevronRight } from "react-icons/fi"
 
 import type { Unit } from "@/lib/api/chat"
 import { cx } from "@/lib/utils"
@@ -11,11 +11,11 @@ import styles from "./chat.module.css"
  * Ubin topik: pintu masuk percakapan, seperti daftar kategori di halaman FAQ.
  *
  * Satu topik = satu unit layanan; pertanyaan berikutnya hanya dicari di dokumen
- * unit itu. Kotak pertanyaan baru muncul setelah salah satunya dipilih. Ubinnya
+ * unit itu. Kotak pertanyaan baru muncul setelah salah satunya dipilih. Barisnya
  * hanya nama unit, tanpa ikon atau emoji (keputusan user 2026-11-11), dalam
- * kisi dua kolom -- ringkas, supaya seluruh daftar muat tanpa digulir.
- * Keterangan unit (bila diisi admin) muncul sebagai tooltip; kebanyakan unit
- * belum punya, jadi tidak ditulis di ubinnya.
+ * satu kartu daftar: satu kolom di bawah sambutan, dua kolom (`.choicesCompact`)
+ * saat dibuka lagi di dasar percakapan. Keterangan unit (bila diisi admin)
+ * tampil kecil di bawah namanya.
  *
  * Setelah satu topik dipilih menunya disembunyikan ChatPanel -- sembilan ubin
  * yang menetap di atas percakapan mendorong jawaban keluar layar -- dan dibuka
@@ -49,9 +49,12 @@ export function TopicMenu({
             aria-pressed={aktif}
             onClick={() => onPick(unit.name)}
             disabled={disabled}
-            title={unit.description ?? undefined}
           >
-            {unit.name}
+            <span className={styles.topicBody}>
+              <span className={styles.topicName}>{unit.name}</span>
+              {unit.description && <span className={styles.topicDesc}>{unit.description}</span>}
+            </span>
+            <FiChevronRight aria-hidden className={styles.topicArrow} />
           </button>
         )
       })}
@@ -99,7 +102,7 @@ export function FaqQuestions({
           disabled={disabled}
         >
           <span>{question}</span>
-          <FaChevronRight aria-hidden className={styles.topicArrow} />
+          <FiChevronRight aria-hidden className={styles.topicArrow} />
         </button>
       ))}
     </div>

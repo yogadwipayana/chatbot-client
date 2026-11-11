@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useSyncExternalStore } from "react"
-import { FaChevronDown } from "react-icons/fa"
+import { FiChevronDown } from "react-icons/fi"
 
 import { nimLoginSads } from "@/lib/sads"
 import { cx } from "@/lib/utils"
@@ -54,7 +54,7 @@ export function ChatWidget() {
           <ChatLogo size={24} />
         </span>
         <span className={cx(styles.launcherIcon, styles.launcherChevron)} aria-hidden>
-          <FaChevronDown />
+          <FiChevronDown />
         </span>
         {/* Tombolnya hanya ikon; namanya tetap ada untuk pembaca layar. */}
         <span className="sr-only">{open ? "Tutup" : "Tanya Asisten"}</span>

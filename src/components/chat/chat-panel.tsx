@@ -1,7 +1,8 @@
 "use client"
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react"
-import { FaArrowUp, FaExchangeAlt, FaLock, FaStop, FaTimes } from "react-icons/fa"
+import { FaStop } from "react-icons/fa"
+import { FiArrowUp, FiLock, FiRepeat, FiX } from "react-icons/fi"
 
 import {
   fetchFaqQuestions,
@@ -139,7 +140,9 @@ export function ChatPanel({
   const isiPercakapan = useMemo(() => [entries, faq], [entries, faq])
 
   const adaTopik = units !== null && units.length > 0
-  const ajakan = adaTopik ? "Silakan pilih topik di bawah ini." : "Silakan tulis pertanyaan di bawah."
+  const ajakan = adaTopik
+    ? "Pilih topik layanan untuk mulai bertanya."
+    : "Silakan tulis pertanyaan Anda di bawah."
   const jumlahPilihan = entries.filter((entry) => entry.role === "topic").length
   const bolehMengetik = nimSah && (jumlahPilihan > 0 || (units !== null && units.length === 0))
   const sudahMemilih = adaTopik && jumlahPilihan > 0
@@ -148,7 +151,10 @@ export function ChatPanel({
   // topik, dan di dasar percakapan saat dibuka lagi -- di sana ia terlihat
   // tanpa menggulir balik ke atas, tepat di atas kotak pertanyaan.
   const menu = adaTopik ? (
-    <div className={styles.choices}>
+    <div className={cx(styles.choices, sudahMemilih && styles.choicesCompact)}>
+      <p className={styles.choicesLabel} aria-hidden>
+        {sudahMemilih ? "Ganti topik" : "Topik layanan"}
+      </p>
       <TopicMenu
         id={`${PANEL_ID}-topik`}
         units={units}
@@ -318,7 +324,7 @@ export function ChatPanel({
             onClick={onClose}
             aria-label="Tutup asisten"
           >
-            <FaTimes aria-hidden />
+            <FiX aria-hidden />
           </button>
         )}
       </header>
@@ -346,8 +352,8 @@ export function ChatPanel({
             jawabannya (dokumen resmi) sudah tertulis di kepala panel, dan
             "Asisten · AI" tetap menandai balasan asisten terakhir. */}
         <div className={styles.welcome}>
-          <p className={styles.welcomeTitle}>Hai, Civitas INSTIKI! 👋</p>
-          <p className={styles.welcomeText}>Apa yang ingin Anda tanyakan? {ajakan}</p>
+          <p className={styles.welcomeTitle}>Hai, Civitas INSTIKI!</p>
+          <p className={styles.welcomeText}>{ajakan}</p>
         </div>
 
         {!sudahMemilih && menu}
@@ -434,7 +440,7 @@ export function ChatPanel({
               }}
               // Singkat seperti composer Glide; topiknya sudah tertulis di
               // pengganti topik di bawah teks ("Topik: …").
-              placeholder="Pesan…"
+              placeholder="Tulis pertanyaan…"
               rows={1}
               maxLength={MAKS_KARAKTER}
               autoComplete="off"
@@ -458,7 +464,7 @@ export function ChatPanel({
                 aria-controls={`${PANEL_ID}-topik`}
                 title={menuTerbuka ? "Tutup daftar topik" : "Ganti topik"}
               >
-                {menuTerbuka ? <FaTimes aria-hidden /> : <FaExchangeAlt aria-hidden />}
+                {menuTerbuka ? <FiX aria-hidden /> : <FiRepeat aria-hidden />}
                 <span className={styles.topicSwitchText}>
                   Topik: <strong>{unit}</strong>
                 </span>
@@ -485,7 +491,7 @@ export function ChatPanel({
                   aria-label="Kirim pertanyaan"
                   title="Kirim pertanyaan"
                 >
-                  <FaArrowUp aria-hidden />
+                  <FiArrowUp aria-hidden />
                 </button>
               )}
             </div>
@@ -499,7 +505,7 @@ export function ChatPanel({
           // Tanpa isian NIM, hanya di sini mahasiswa tahu kenapa ubin topik
           // dan kotak pertanyaannya tidak dapat dipakai.
           <p className={styles.composerHint} role="status">
-            <FaLock aria-hidden />
+            <FiLock aria-hidden />
             {alasanTanpaNim(hasilNim)}
           </p>
         ) : null}

@@ -59,11 +59,10 @@
     `<path fill="#fff" stroke="#171717" stroke-width="2.4" stroke-linejoin="round" d="${BALON}"></path>` +
     `<path fill="none" stroke="#171717" stroke-width="2.4" stroke-linecap="round" d="M8.5 10.5h11M8.5 15h6.5"></path>` +
     `</svg>`
-  // Ikon FaChevronDown (react-icons), sama dengan tombol di portal.
-  const IKON_TUTUP = svg(
-    "0 0 448 512",
-    "M207.029 381.476L12.686 187.132c-9.373-9.373-9.373-24.569 0-33.941l22.667-22.667c9.357-9.357 24.522-9.375 33.901-.04L224 284.505l154.745-154.021c9.379-9.335 24.544-9.317 33.901.04l22.667 22.667c9.373 9.373 9.373 24.569 0 33.941L240.971 381.476c-9.373 9.372-24.569 9.372-33.942 0z"
-  )
+  // Ikon FiChevronDown (react-icons/fi, bergaris), sama dengan tombol di portal.
+  const IKON_TUTUP =
+    `<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false">` +
+    `<polyline points="6 9 12 15 18 9"></polyline></svg>`
 
   // Bukan <div>: aturan seperti `div { margin: ... }` milik situs penyemat
   // tidak boleh ikut mengenai elemen ini.
@@ -116,16 +115,18 @@
       outline-offset: 3px;
     }
 
+    /* Sama dengan <ChatLogo size={24} /> dan .launcher svg (24px) di portal. */
     .launcher svg {
-      width: 1em;
-      height: 1em;
-      font-size: 18px;
-      fill: currentColor;
+      width: 24px;
+      height: 24px;
     }
 
-    /* Sama dengan <ChatLogo size={24} /> di tombol portal. */
-    .launcher svg.logo {
-      font-size: 24px;
+    .launcher svg.chevron {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     /* Sama dengan .launcherIcon di chat.module.css: logo dan chevron
@@ -342,9 +343,5 @@
       // Isinya bukan JSON, atau localStorage diblokir: dianggap belum masuk.
       return null
     }
-  }
-
-  function svg(viewBox, d) {
-    return `<svg viewBox="${viewBox}" aria-hidden="true" focusable="false"><path d="${d}"></path></svg>`
   }
 })()

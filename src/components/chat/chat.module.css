@@ -62,7 +62,7 @@
 }
 
 .launcher svg {
-  font-size: 18px;
+  font-size: 24px;
 }
 
 /* Logo dan chevron bertumpuk di sel yang sama. Saat dibuka logonya berputar
@@ -210,30 +210,29 @@
   flex: none;
   align-items: center;
   gap: 12px;
-  padding: 14px 10px 14px 16px;
-  background: linear-gradient(135deg, var(--red) 0%, var(--red-darker) 100%);
+  padding: 12px 8px 12px 16px;
+  background: linear-gradient(180deg, var(--red) 0%, var(--red-dark) 100%);
   color: #fff;
 }
 
 /* Logo hitam putih (keputusan user, docs/logo/README.md) di dalam lingkaran
    putih: tampak sebagai avatar asisten, bukan stiker yang mengambang di atas
-   merah. Logonya bergeser sedikit ke kiri atas karena bayangan padatnya
-   menambah berat di kanan bawah. */
+   merah. Gambarnya (balon + bayangan) tidak tepat di tengah kotak SVG-nya --
+   pusatnya (15,15; 15,75) dari 32 -- jadi digeser sebesar selisih itu pada
+   ukuran 24px supaya tepat di tengah lingkaran. */
 .headerAvatar {
   display: grid;
   flex: none;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: #fff;
-  box-shadow:
-    0 0 0 3px rgba(255, 255, 255, 0.2),
-    0 2px 6px rgba(80, 20, 10, 0.25);
+  box-shadow: 0 1px 2px rgba(80, 20, 10, 0.2);
 }
 
 .headerAvatar svg {
-  transform: translate(-1px, -1px);
+  transform: translate(0.6px, 0.2px);
 }
 
 .heading {
@@ -243,16 +242,15 @@
 
 .title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   line-height: 1.25;
-  letter-spacing: 0.005em;
 }
 
 .subtitle {
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   overflow: hidden;
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.3;
   color: rgba(255, 255, 255, 0.85);
   text-overflow: ellipsis;
@@ -266,10 +264,10 @@
   width: 34px;
   height: 34px;
   border: 0;
-  border-radius: 50%;
+  border-radius: 8px;
   background: transparent;
   color: rgba(255, 255, 255, 0.9);
-  font-size: 15px;
+  font-size: 19px;
   transition: background-color 0.15s, color 0.15s;
 }
 
@@ -329,7 +327,7 @@
 
 .menuItem svg {
   flex: none;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--chat-muted);
 }
 
@@ -592,12 +590,12 @@
    kecil dengan menu yang menempel jauh di dasar menyisakan celah kosong yang
    tampak seperti panel yang belum selesai dimuat. */
 .welcome {
-  margin: 2px 2px 16px;
+  margin: 2px 2px 18px;
 }
 
 .welcomeTitle {
   margin: 0;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
   line-height: 1.25;
   letter-spacing: -0.01em;
@@ -605,7 +603,7 @@
 }
 
 .welcomeText {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   font-size: 14px;
   line-height: 1.5;
   color: var(--chat-text-soft);
@@ -615,61 +613,106 @@
   margin-bottom: 12px;
 }
 
-/* Kisi ubin topik: dua kolom di panel 400 px dan layar ponsel, lebih banyak
-   di halaman /embed yang lebar. Lebarnya sama rata -- pil selebar namanya
-   menghasilkan baris yang tidak rata. Seluruh daftar muat tanpa digulir, jadi
-   sambutan tetap terlihat di atasnya. */
+/* Judul kecil di atas daftar topik, segaya dengan "Sumber". */
+.choicesLabel {
+  margin: 0 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--chat-muted);
+}
+
+/* Daftar topik dalam satu kartu, baris demi baris seperti menu: nama di kiri,
+   panah di kanan. Garis antarbarisnya adalah latar kisi yang terlihat lewat
+   celah 1px, jadi kartu yang sama bisa satu kolom (di bawah sambutan, seluruh
+   daftar muat tanpa digulir) atau dua kolom (`.choicesCompact`, saat dibuka
+   lagi di dasar percakapan supaya tidak menutupi seluruh jawaban). */
 .topics {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--chat-line);
+  border-radius: 12px;
+  background: var(--chat-line);
+  box-shadow: var(--chat-shadow-card);
+}
+
+.choicesCompact .topics {
+  grid-template-columns: 1fr 1fr;
+}
+
+/* Baris terakhir yang sendirian mengisi kedua kolom. */
+.choicesCompact .topic:last-child:nth-child(odd) {
+  grid-column: span 2;
 }
 
 /* Nama unit saja, tanpa ikon (keputusan user 2026-11-11). */
 .topic {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
   min-width: 0;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid var(--chat-line);
-  border-radius: 12px;
+  min-height: 42px;
+  padding: 8px 10px 8px 14px;
+  border: 0;
   background: var(--chat-surface);
-  box-shadow: var(--chat-shadow-card);
   color: var(--chat-text);
   font-size: 14px;
-  font-weight: 600;
-  line-height: 1.2;
-  text-align: center;
-  overflow-wrap: anywhere;
+  line-height: 1.3;
+  text-align: left;
   transition:
-    border-color 0.15s,
     background-color 0.15s,
-    color 0.15s,
-    box-shadow 0.15s;
+    color 0.15s;
+}
+
+.topicBody {
+  display: grid;
+  flex: 1;
+  gap: 1px;
+  min-width: 0;
+}
+
+.topicName {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.topicDesc {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--chat-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .topic:hover:not(:disabled) {
-  border-color: var(--chat-accent-line);
-  background: #fffafa;
-  box-shadow: 0 2px 6px rgba(16, 24, 40, 0.06);
-  color: var(--chat-accent-dark);
+  background: var(--chat-subtle);
+}
+
+.topic:hover:not(:disabled) .topicArrow {
+  color: var(--chat-accent);
+  transform: translateX(2px);
 }
 
 .topic:disabled {
-  box-shadow: none;
-  opacity: 0.55;
+  color: var(--chat-faint);
   cursor: not-allowed;
 }
 
+.topic:disabled .topicDesc {
+  color: var(--chat-faint);
+}
+
+/* Di dalam bingkai: kartunya memotong apa pun yang keluar dari tepinya. */
 .topic:focus-visible {
   outline: 2px solid var(--chat-accent);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 /* Panel /embed yang dibuka dengan klik di situs penyemat (`cincinTopik` di
-   chat-panel.tsx): ubin pertama tetap difokuskan, tetapi tanpa cincin --
+   chat-panel.tsx): baris pertama tetap difokuskan, tetapi tanpa cincin --
    sama dengan widget portal yang dibuka dengan klik. */
 .tanpaCincin .topic:focus-visible {
   outline: none;
@@ -678,14 +721,17 @@
 /* Topik yang sedang berlaku untuk pertanyaan berikutnya. */
 .topicActive,
 .topicActive:hover:not(:disabled) {
-  border-color: var(--chat-accent);
   background: var(--chat-accent-soft);
   color: var(--chat-accent-dark);
 }
 
+.topicActive .topicArrow {
+  color: var(--chat-accent);
+}
+
 .topicArrow {
   flex: none;
-  font-size: 10px;
+  font-size: 16px;
   color: var(--chat-faint);
   transition: transform 0.15s, color 0.15s;
 }
@@ -1476,7 +1522,7 @@ ol.list {
 
 .topicSwitch svg {
   flex: none;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .topicSwitchText {
@@ -1521,12 +1567,17 @@ ol.list {
   border-radius: 50%;
   background: var(--chat-accent);
   color: #fff;
-  font-size: 13px;
+  font-size: 17px;
   cursor: pointer;
   transition:
     background-color 0.15s,
     color 0.15s,
     transform 0.15s;
+}
+
+/* Tombol henti: kotak padat (FaStop), lebih kecil dari panah bergaris. */
+.send[type="button"] {
+  font-size: 11px;
 }
 
 .send:hover:not(:disabled) {
@@ -1569,8 +1620,8 @@ ol.list {
 
 .composerHint svg {
   flex: none;
-  margin-top: 3px;
-  font-size: 12px;
+  margin-top: 2px;
+  font-size: 14px;
   color: var(--chat-muted);
 }
 
@@ -1618,6 +1669,15 @@ ol.list {
   }
 }
 
+/* Layar sentuh: baris topik yang lebih lega. Bukan berdasarkan lebar -- iframe
+   `embed.js` di desktop hanya 400 px, dan di sana daftar harus tetap muat
+   tanpa digulir seperti di portal. */
+@media (pointer: coarse) {
+  .topic {
+    min-height: 48px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dots span,
   .caret,
@@ -1640,6 +1700,7 @@ ol.list {
 
   .launcher:hover,
   .send:active:not(:disabled),
+  .topic:hover:not(:disabled) .topicArrow,
   .suggestion:hover:not(:disabled) .topicArrow {
     transform: none;
   }
