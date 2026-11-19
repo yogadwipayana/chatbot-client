@@ -19,6 +19,10 @@ const KonteksLogin = createContext<LoginSads | null>(null)
  * Datanya hanya ada di peramban, jadi server merender halaman kosong dan isinya
  * baru muncul setelah localStorage terbaca. Keluar di tab lain (`/masuk`
  * dibuka) ikut mengalihkan tab ini.
+ *
+ * Ini hanya sumber NIM, bukan pengaman: `kojindeta` bisa ditulis siapa pun
+ * lewat konsol. Yang mewajibkan password adalah cookie akses yang diperiksa
+ * `src/proxy.ts` sebelum halaman sampai ke sini.
  */
 export function GerbangLoginSads({ children }: { children: React.ReactNode }) {
   const mentah = useSyncExternalStore<string | null | undefined>(

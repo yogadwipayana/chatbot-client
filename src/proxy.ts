@@ -1,9 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server"
 
+import { COOKIE_AKSES, passwordPortal, tokenAksesSah } from "@/lib/akses-portal"
 import { HEADER_STATUS_SEMATAN, type StatusSematan } from "@/lib/embed"
 
 /**
- * Siapa yang boleh membingkai portal dalam iframe (`frame-ancestors`).
+ * Dua pemeriksaan sebelum halaman dirender.
+ *
+ * 1. Gerbang password portal. Halaman portal selain `/masuk` dan `/embed` hanya
+ *    untuk yang sudah Sign In dengan `CLIENT_PASSWORD` (`lib/akses-portal.ts`);
+ *    tanpa cookie akses yang sah, pengunjung dialihkan ke `/masuk`. Gerbang
+ *    `kojindeta` di peramban (`components/layout/login-sads.tsx`) tidak cukup:
+ *    isinya bisa ditulis sendiri lewat konsol. `/embed` tidak ikut: di sana NIM
+ *    datang dari login SADS sungguhan lewat `embed.js`, bukan dari portal ini.
+ *    Gerbang ini tidak melindungi API -- API tetap dapat dipanggil langsung.
+ *
+ * 2. Siapa yang boleh membingkai portal dalam iframe (`frame-ancestors`).
  *
  * `/embed?key=emb_...` -- panel yang dipasang situs lain lewat `public/embed.js`
  * -- menanyakan kuncinya ke API setiap kali dimuat, lalu hanya boleh dibingkai
@@ -16,7 +27,11 @@ import { HEADER_STATUS_SEMATAN, type StatusSematan } from "@/lib/embed"
  * memakai asisten tanpa kunci sama sekali.
  */
 export async function proxy(request: NextRequest) {
-  if (request.nextUrl.pathname !== "/embed") {
+  const jalur = request.nextUrl.pathname
+  if (jalur !== "/embed") {
+    if (jalur !== "/masuk" && !aksesSah(request)) {
+      return denganAncestors(NextResponse.redirect(new URL("/masuk", request.nextUrl)), ["'self'"])
+    }
     return denganAncestors(NextResponse.next(), ["'self'"])
   }
 
@@ -29,6 +44,12 @@ export async function proxy(request: NextRequest) {
 export const config = {
   // Berkas statis (`/embed.js`, `/logo.svg`, `/_next/...`) tidak butuh header ini.
   matcher: ["/((?!_next/static|_next/image|.*\\.[^/]+$).*)"],
+}
+
+/** `CLIENT_PASSWORD` kosong = tidak ada akses yang sah, sama seperti di Sign In. */
+function aksesSah(request: NextRequest): boolean {
+  const password = passwordPortal()
+  return password !== null && tokenAksesSah(request.cookies.get(COOKIE_AKSES)?.value, password)
 }
 
 type HasilPemeriksaan = { status: StatusSematan; ancestors: string[] }

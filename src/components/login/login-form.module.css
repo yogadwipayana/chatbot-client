@@ -112,6 +112,11 @@
   background: #367fa9;
 }
 
+.button:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
 .hint {
   margin: 15px 0 0;
   color: var(--muted);

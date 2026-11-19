@@ -202,12 +202,18 @@ sequenceDiagram
   Pembacanya ada dua dan harus sejalan: `nimSads` di `embed.js` dan
   `bacaLoginSads` di `src/lib/sads.ts`.
 - **Portal meniru Sign In SADS di `/masuk`.** Halaman portal (`/`) hanya
-  terbuka setelah Sign In; tanpa `kojindeta` pengunjung dialihkan ke sana.
-  NIM wajib 10 angka, password boleh kosong dan tidak dibaca. Yang ditulis
-  hanya `id1` (NIM itu), `nama`, dan `jur` -- dua yang terakhir dari mahasiswa
-  contoh. "Sign out" di header membuka `/masuk`, yang menghapus `kojindeta`
-  (hanya kunci itu: sesi chat portal disimpan di asal yang sama). `/embed`
-  tidak ikut digerbangi.
+  terbuka setelah Sign In. NIM wajib 10 angka dan password wajib sama dengan
+  `CLIENT_PASSWORD` di `.env` portal (sejak 2026-11-19; satu password untuk
+  semua NIM, NIM-nya sendiri tidak diperiksa). Password diperiksa Server
+  Action `src/app/masuk/actions.ts`, yang memasang cookie httpOnly
+  `portal_akses` (berlaku 12 jam, ditandatangani HMAC dengan password itu);
+  `src/proxy.ts` mengalihkan setiap halaman portal tanpa cookie sah ke
+  `/masuk`. `CLIENT_PASSWORD` kosong = tidak ada yang bisa Sign In. Setelah
+  itu `kojindeta` ditulis seperti SADS: hanya `id1` (NIM itu), `nama`, dan
+  `jur` -- dua yang terakhir dari mahasiswa contoh. "Sign out" di header
+  membuka `/masuk`, yang menghapus `kojindeta` (hanya kunci itu: sesi chat
+  portal disimpan di asal yang sama) dan cookie akses. `/embed` tidak ikut
+  digerbangi, dan API tetap dapat dipanggil langsung tanpa password ini.
 - **Domain portal dibaca dari `src` script itu sendiri** (`document.currentScript`),
   jadi `embed.js` tidak menyimpan alamat apa pun dan berkas yang sama berlaku
   di dev, staging, dan produksi.
@@ -337,7 +343,9 @@ di dalam iframe, ganti konteks `top` di tab Console ke frame `/embed`.
 |---|---|
 | [`public/embed.js`](../public/embed.js) | Skrip sematan: tombol, iframe, pesan buka/tutup, NIM dari login SADS |
 | [`src/lib/sads.ts`](../src/lib/sads.ts) | Membaca NIM dari `kojindeta`; dipakai widget portal dan iframe |
-| [`src/components/login/login-form.tsx`](../src/components/login/login-form.tsx) | Tiruan Sign In SADS di `/masuk` (NIM wajib, password boleh kosong) |
+| [`src/components/login/login-form.tsx`](../src/components/login/login-form.tsx) | Tiruan Sign In SADS di `/masuk` (NIM 10 angka + `CLIENT_PASSWORD`) |
+| [`src/app/masuk/actions.ts`](../src/app/masuk/actions.ts) | Server Action Sign In/keluar: periksa password, pasang/hapus cookie akses |
+| [`src/lib/akses-portal.ts`](../src/lib/akses-portal.ts) | `CLIENT_PASSWORD` dan token cookie akses (khusus server) |
 | [`src/components/layout/login-sads.tsx`](../src/components/layout/login-sads.tsx) | Gerbang login halaman portal; NIM yang sedang masuk |
 | [`src/proxy.ts`](../src/proxy.ts) | Pemeriksaan kunci dan header `frame-ancestors` seluruh portal |
 | [`src/app/embed/page.tsx`](../src/app/embed/page.tsx) | Halaman `/embed` |
