@@ -147,7 +147,7 @@ export function AssistantMessage({
       <BotBubble tone={response.kind} extra={feedback} meta={meta}>
         <span className={styles.label}>
           {refusal ? <FaExclamationTriangle aria-hidden /> : <FaHandHoldingHeart aria-hidden />}
-          {refusal ? "Tidak ditemukan di dokumen resmi" : "Ada yang siap membantu"}
+          {refusal ? "Belum terjawab" : "Ada yang siap membantu"}
         </span>
         <RichText text={response.text} tautKontak />
       </BotBubble>
