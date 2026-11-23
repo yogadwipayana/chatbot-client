@@ -32,7 +32,20 @@ const nextConfig: NextConfig = {
     root: path.join(__dirname),
   },
   async headers() {
-    return [{ source: "/:path*", headers: headerKeamanan }];
+    return [
+      { source: "/:path*", headers: headerKeamanan },
+      // Aset maskot (docs/maskot/README.md). Berkas `public/` lain tetap
+      // `max-age=0` bawaan Next. Tanpa ini setiap halaman situs penyemat
+      // bertanya ulang ke portal soal gambar tombol pembuka. Namanya tidak
+      // di-hash, jadi URL-nya membawa `?v=VERSI_MASKOT`, yang dinaikkan setiap
+      // kali aset dibuat ulang.
+      {
+        source: "/maskot/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" },
+        ],
+      },
+    ];
   },
 };
 

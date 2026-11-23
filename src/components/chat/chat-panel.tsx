@@ -16,12 +16,12 @@ import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
 import { KonfirmasiBaru } from "./chat-confirm"
-import { ChatLogo } from "./chat-logo"
+import { ekspresiBalasan, MaskotKepala, type Ekspresi, type Reaksi } from "./chat-maskot"
 import { MenuPanel } from "./chat-menu"
 import { AssistantMessage, BotBubble, UserMessage } from "./chat-message"
 import { CariPercakapan } from "./chat-search"
 import { FaqQuestions, TopicMenu, topicReply } from "./topic-menu"
-import { bannerEskalasiTerakhir, useChat } from "./use-chat"
+import { bannerEskalasiTerakhir, useChat, type FeedbackControls } from "./use-chat"
 
 export const PANEL_ID = "asisten-administrasi"
 
@@ -134,6 +134,39 @@ export function ChatPanel({
   // ditutup membatalkannya: dibuka lagi, panel tidak boleh langsung
   // menanyakan sesuatu yang sudah tidak diingat mahasiswa.
   const [konfirmasiBaru, setKonfirmasiBaru] = useState(false)
+  // Reaksi maskot kepala panel (`MaskotKepala`): situasi jawaban terakhir,
+  // 👍/👎, dan "Percakapan baru". Di percakapan sendiri maskot hanya ada di
+  // gelembung menunggu (keputusan user 2026-11-23).
+  const [reaksi, setReaksi] = useState<Reaksi>({ ke: 0, antrean: [] })
+  function picu(antrean: Ekspresi[]) {
+    setReaksi((sebelumnya) => ({ ke: sebelumnya.ke + 1, antrean }))
+  }
+  // Balasan terakhir, sekali per tahapnya. Pertanyaan baru (menunggu atau
+  // mengalir) mengembalikan kepala panel ke netral -- berpikirnya sudah tampak
+  // di gelembung. Balasan yang selesai memutar ekspresinya dua putaran, supaya
+  // sempat terlihat selagi jawabannya mulai dibaca; tanpa ekspresi (dukungan,
+  // dihentikan), netral. Percakapan kosong tidak memicu apa-apa: pamitan
+  // "Percakapan baru" tidak boleh tertimpa.
+  const akhir = entries.at(-1)
+  const kunciAkhir =
+    akhir?.role === "assistant"
+      ? `${akhir.id}:${akhir.state === "streaming" ? "pending" : akhir.state}`
+      : null
+  const [kunciAkhirSebelumnya, setKunciAkhirSebelumnya] = useState(kunciAkhir)
+  if (kunciAkhir !== kunciAkhirSebelumnya) {
+    setKunciAkhirSebelumnya(kunciAkhir)
+    if (akhir && kunciAkhir) {
+      const ekspresi = ekspresiBalasan(akhir)
+      picu(ekspresi ? [ekspresi, ekspresi] : [])
+    }
+  }
+  const penilaian: FeedbackControls = {
+    ...feedback,
+    rate: (messageId, helpful) => {
+      if (feedback.ratings[messageId] !== helpful) picu([helpful ? "bonus-like" : "bonus-dislike"])
+      return feedback.rate(messageId, helpful)
+    },
+  }
   if (!open && konfirmasiBaru) setKonfirmasiBaru(false)
   // Pencarian diulang setiap kali isi percakapan berubah. Balasan topik ikut
   // berubah saat pertanyaan siap kliknya selesai dimuat.
@@ -278,6 +311,7 @@ export function ChatPanel({
   function percakapanBaru() {
     tutupKonfirmasi()
     reset()
+    picu(["selamat-tinggal", "melambai"])
     setDraft("")
     setMenuTerbuka(false)
     setCariTerbuka(false)
@@ -298,9 +332,7 @@ export function ChatPanel({
       onKeyDown={(event) => event.key === "Escape" && onClose?.()}
     >
       <header className={styles.header}>
-        <span className={styles.headerAvatar} aria-hidden>
-          <ChatLogo size={24} />
-        </span>
+        <MaskotKepala open={open} reaksi={reaksi} />
         <div className={styles.heading}>
           <h2 id={`${PANEL_ID}-judul`} className={styles.title}>
             Asisten Administrasi
@@ -388,7 +420,7 @@ export function ChatPanel({
             <AssistantMessage
               key={entry.id}
               entry={entry}
-              controls={feedback}
+              controls={penilaian}
               showEscalation={bannerEskalasi.has(entry.id)}
               meta={entry.id === balasanTerakhir}
             />

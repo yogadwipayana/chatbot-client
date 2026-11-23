@@ -65,7 +65,7 @@
   font-size: 24px;
 }
 
-/* Logo dan chevron bertumpuk di sel yang sama. Saat dibuka logonya berputar
+/* Maskot dan chevron bertumpuk di sel yang sama. Saat dibuka maskotnya berputar
    keluar searah jarum jam sambil mengecil dan memudar, dan chevron menyusul
    masuk dengan putaran yang sama; saat ditutup gerakannya berbalik. */
 .launcherIcon {
@@ -78,7 +78,7 @@
 }
 
 .launcherChevron,
-.launcherOpen .launcherLogo {
+.launcherOpen .launcherMaskot {
   opacity: 0;
 }
 
@@ -86,7 +86,7 @@
   transform: rotate(-90deg) scale(0.4);
 }
 
-.launcherOpen .launcherLogo {
+.launcherOpen .launcherMaskot {
   transform: rotate(90deg) scale(0.4);
 }
 
@@ -215,24 +215,16 @@
   color: #fff;
 }
 
-/* Logo hitam putih (keputusan user, docs/logo/README.md) di dalam lingkaran
-   putih: tampak sebagai avatar asisten, bukan stiker yang mengambang di atas
-   merah. Gambarnya (balon + bayangan) tidak tepat di tengah kotak SVG-nya --
-   pusatnya (15,15; 15,75) dari 32 -- jadi digeser sebesar selisih itu pada
-   ukuran 24px supaya tepat di tengah lingkaran. */
-.headerAvatar {
+/* Maskot di sebelah judul (`MaskotKepala`, pengganti logo balon sejak
+   2026-11-23), langsung di atas merah seperti di tombol pembuka. Kotaknya 50px
+   seukuran gambar, tetapi margin negatifnya membuatnya hanya memakan 36px di
+   baris kepala; tangan yang melambai masih muat sebelum judul. */
+.headerMaskot {
   display: grid;
   flex: none;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(80, 20, 10, 0.2);
-}
-
-.headerAvatar svg {
-  transform: translate(0.6px, 0.2px);
+  width: 50px;
+  height: 50px;
+  margin: -7px;
 }
 
 .heading {
@@ -903,25 +895,41 @@ ol.list {
   color: #175cd3;
 }
 
-.dots {
-  display: inline-flex;
-  gap: 4px;
+/* --- Maskot (chat-maskot.tsx) -------------------------------------------- */
+
+.maskot {
+  display: block;
+  flex: none;
 }
 
-.dots span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--chat-faint);
-  animation: blink 1.2s infinite both;
+.maskot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
 }
 
-.dots span:nth-child(2) {
-  animation-delay: 0.2s;
+/* Ukuran di bawah dipilih supaya badan maskot sekitar dua pertiga ukuran
+   gambarnya: setiap gambar menyisakan ruang di sekeliling badan untuk tangan,
+   lampu, zzz, tanda tanya, dan lubang "selamat tinggal".
+
+   Tombol pembuka dan kepala panel: yang ditengahkan adalah badannya (pusatnya
+   di 49% x 65% gambar, docs/maskot/README.md), bukan gambarnya.
+   Salinannya: .launcher .maskot di public/embed.js. */
+.maskotTengah {
+  width: 50px;
+  height: 50px;
+  transform: translate(1px, -7px);
 }
 
-.dots span:nth-child(3) {
-  animation-delay: 0.4s;
+/* Satu-satunya maskot di percakapan: gelembung menunggu (keputusan user
+   2026-11-23; situasi jawaban lainnya ditunjukkan maskot kepala panel).
+   Margin negatif supaya gelembungnya tidak lebih tinggi daripada gelembung
+   satu baris. */
+.maskotGelembung {
+  width: 45px;
+  height: 45px;
+  margin: -10px -4px -10px -8px;
 }
 
 @keyframes blink {
@@ -1679,7 +1687,6 @@ ol.list {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dots span,
   .caret,
   .spinner {
     animation: none;

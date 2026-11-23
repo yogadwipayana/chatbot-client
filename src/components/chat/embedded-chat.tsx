@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 import { bentukNim } from "@/lib/sads"
 
 import styles from "./chat.module.css"
-import { ChatLogo } from "./chat-logo"
+import { MaskotKepalaDiam } from "./chat-maskot"
 import { BotBubble } from "./chat-message"
 import { ChatPanel } from "./chat-panel"
 
@@ -119,9 +119,7 @@ export function EmbedUnavailable({ status }: { status: "tidak-berlaku" | "gagal"
   return (
     <section className={styles.embedded} aria-labelledby="asisten-tidak-tersedia">
       <header className={styles.header}>
-        <span className={styles.headerAvatar} aria-hidden>
-          <ChatLogo size={24} />
-        </span>
+        <MaskotKepalaDiam />
         <div className={styles.heading}>
           <h2 id="asisten-tidak-tersedia" className={styles.title}>
             Asisten Administrasi

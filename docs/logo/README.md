@@ -4,8 +4,8 @@ Logo dipakai di empat tempat:
 
 - **Ikon tab peramban** admin dan client: `src/app/icon.svg` dan `src/app/favicon.ico` di masing-masing app. Next.js memasangnya otomatis.
 - **Logo admin** (sidebar dan halaman login `/masuk`, termasuk kepala widget contoh di sebelah formulir): komponen `AppLogo` di `admin/src/components/layout/app-logo.tsx`.
-- **Logo widget chatbot** (kepala panel di portal dan di `/embed`): komponen `ChatLogo` di `client/src/components/chat/chat-logo.tsx`, sejak `balon-bayangan`.
-- **Tombol pembuka widget** (bulat, ikon saja): `ChatLogo` ukuran 24 di tombol portal, dan salinannya (`BALON` + `IKON_BUKA`) di `client/public/embed.js` untuk situs penyemat, karena berkas itu tanpa build step dan tidak bisa mengimpor komponen.
+- **Widget chatbot**: sejak 2026-11-23 kepala panel dan tombol pembuka memakai maskot (`client/docs/maskot/README.md`), atas permintaan user. Komponen `ChatLogo` dihapus.
+- **Logo cadangan tombol pembuka di situs penyemat**: `balon-bayangan` (`BALON` + `LOGO`) di `client/public/embed.js`. Hanya tampil bila situs penyemat menolak gambar maskot (CSP `img-src`).
 
 Semua logo hitam putih (keputusan user 2026-10-23). File `.svg` berganti warna sendiri saat peramban memakai mode gelap. File `.ico` adalah cadangan untuk peramban lama dan tidak punya mode gelap. Logo di sidebar memakai warna `primary` tema, jadi ikut terbalik di mode gelap.
 
@@ -23,7 +23,7 @@ Semua logo hitam putih (keputusan user 2026-10-23). File `.svg` berganti warna s
 1. Salin `<nama>.svg` ke `admin/src/app/icon.svg` dan `client/src/app/icon.svg`.
 2. Salin `<nama>.ico` ke `admin/src/app/favicon.ico` dan `client/src/app/favicon.ico`.
 3. Ganti isi `<svg>` di `AppLogo` dengan bentuk yang sama, termasuk `viewBox` (logo piksel `0 0 16 16` dengan `shapeRendering="crispEdges"`, logo lain `0 0 32 32` tanpa atribut itu). Pakai kelas `fill-primary`/`stroke-primary` untuk warna gelap dan `fill-primary-foreground`/`stroke-primary-foreground` untuk warna terang; jangan pakai warna tetap.
-4. Ganti juga isi `<svg>` di `ChatLogo` dan salinannya di `public/embed.js` (`BALON`, `IKON_BUKA`). Kepala panel widget berwarna merah dan tidak punya mode gelap, jadi di sana pakai warna tetap `#171717` dan `#fff` (versi terang logo), bukan kelas tema.
+4. Ganti juga logo cadangan di `client/public/embed.js` (`BALON`, `LOGO`). Tombol widget berwarna merah dan tidak punya mode gelap, jadi di sana pakai warna tetap `#171717` dan `#fff` (versi terang logo), bukan kelas tema.
 5. Muat ulang tab dengan Ctrl+F5, karena peramban menyimpan ikon tab di cache.
 
 Isi `<svg>` untuk `AppLogo` versi `balon-a`:

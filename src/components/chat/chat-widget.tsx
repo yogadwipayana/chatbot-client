@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useSyncExternalStore } from "react"
+import { useEffect, useState, useSyncExternalStore } from "react"
 import { FiChevronDown } from "react-icons/fi"
 
 import { nimLoginSads } from "@/lib/sads"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
-import { ChatLogo } from "./chat-logo"
+import { Maskot, NGANTUK_SETELAH } from "./chat-maskot"
 import { ChatPanel, PANEL_ID } from "./chat-panel"
 
 /**
@@ -21,6 +21,19 @@ export function ChatWidget() {
   // Di layar sempit panelnya sudah selebar layar (media query di
   // chat.module.css), jadi "Perluas jendela" tidak ditawarkan.
   const layarLebar = useSyncExternalStore(pantauLayarLebar, layarLebarSekarang, () => true)
+  // Tombol yang lama tidak disentuh -- panel tertutup, tidak diarahkan
+  // penunjuk, tidak difokus -- berganti ke maskot mengantuk; disentuh lagi, ia
+  // bangun. Hanya tombolnya sendiri yang dipantau, bukan aktivitas halaman.
+  const [diarahkan, setDiarahkan] = useState(false)
+  const [difokus, setDifokus] = useState(false)
+  const [ngantuk, setNgantuk] = useState(false)
+  const bangun = open || diarahkan || difokus
+  if (bangun && ngantuk) setNgantuk(false)
+  useEffect(() => {
+    if (bangun) return
+    const timer = setTimeout(() => setNgantuk(true), NGANTUK_SETELAH)
+    return () => clearTimeout(timer)
+  }, [bangun])
 
   function toggle() {
     // Dibaca saat panel dibuka, bukan saat halaman dimuat: data login SADS
@@ -45,13 +58,24 @@ export function ChatWidget() {
         onClick={toggle}
         aria-expanded={open}
         aria-controls={PANEL_ID}
+        onPointerEnter={() => setDiarahkan(true)}
+        onPointerLeave={() => setDiarahkan(false)}
+        onFocus={() => setDifokus(true)}
+        onBlur={() => setDifokus(false)}
       >
-        {/* Terbuka: panah ke bawah, seperti tombol widget Glide -- panelnya
+        {/* Tertutup: maskot netral, atau mengantuk bila lama tidak disentuh
+            (keputusan user 11-23, pengganti logo balon, sama dengan kepala
+            panel).
+            Terbuka: panah ke bawah, seperti tombol widget Glide -- panelnya
             "turun" kembali ke tombol ini. ✕ tetap ada di kepala panel.
             Keduanya selalu terpasang dan bertumpuk, supaya pergantiannya
             bisa dianimasikan (chat.module.css). */}
-        <span className={cx(styles.launcherIcon, styles.launcherLogo)} aria-hidden>
-          <ChatLogo size={24} />
+        <span className={cx(styles.launcherIcon, styles.launcherMaskot)} aria-hidden>
+          <Maskot
+            ekspresi={ngantuk ? "ngantuk" : "netral"}
+            ukuran={50}
+            className={styles.maskotTengah}
+          />
         </span>
         <span className={cx(styles.launcherIcon, styles.launcherChevron)} aria-hidden>
           <FiChevronDown />

@@ -3,7 +3,7 @@
  *
  *   <script src="https://<domain-portal>/embed.js" data-key="emb_..." async></script>
  *
- * Satu baris itu memasang tombol bulat berlogo asisten di pojok kanan bawah. Panelnya
+ * Satu baris itu memasang tombol bulat bermaskot asisten di pojok kanan bawah. Panelnya
  * adalah halaman /embed milik portal yang dimuat dalam iframe, jadi situs
  * penyemat tidak menyalin desain dan tidak memanggil API sendiri: permintaan ke
  * API berangkat dari asal portal, yang sudah terdaftar di CORS_ORIGINS API.
@@ -48,12 +48,29 @@
   const PESAN_IDENTITAS = "asisten:identitas"
   const PESAN_PERLUAS = "asisten:perluas"
 
-  // Logo asisten, salinan `ChatLogo` (src/components/chat/chat-logo.tsx) di
-  // tombol portal: bila logonya diganti, samakan keduanya (docs/logo/README.md).
+  // Maskot di tombol, sama dengan tombol portal (chat-widget.tsx): netral, atau
+  // mengantuk bila tombolnya lama tidak disentuh (`aturMaskot`). Diunduh dari
+  // asal portal (docs/maskot/README.md). `alt` kosong: nama tombolnya ada di
+  // .label.
+  // Sama dengan VERSI_MASKOT di src/components/chat/chat-maskot.tsx: asetnya
+  // disimpan peramban seminggu, jadi versinya naik setiap kali aset dibuat ulang.
+  const VERSI_MASKOT = "20261123"
+  const maskotUrl = (ekspresi, diam) =>
+    `${ASAL}/maskot/${ekspresi}${diam ? "-diam" : ""}.webp?v=${VERSI_MASKOT}`
+  const IKON_BUKA =
+    `<picture class="maskot">` +
+    `<source media="(prefers-reduced-motion: reduce)" srcset="${maskotUrl("netral", true)}">` +
+    `<img src="${maskotUrl("netral")}" alt="" width="50" height="50" draggable="false">` +
+    `</picture>`
+  // Sama dengan NGANTUK_SETELAH di src/components/chat/chat-maskot.tsx.
+  const NGANTUK_SETELAH = 60000
+  // Cadangan bila situs penyemat menolak gambar dari asal portal (CSP
+  // `img-src`): logo balon asisten (`balon-bayangan`, docs/logo/README.md), yang
+  // di portal sudah digantikan maskot sejak 2026-11-23.
   // Warnanya tetap; `fill` pada tiap path mengalahkan `fill: currentColor`.
   const BALON =
     "M8 4h12a5 5 0 0 1 5 5v7a5 5 0 0 1-5 5h-7.5l-4.6 3.8c-.6.5-1.4.1-1.4-.7V20.6A5 5 0 0 1 3 16V9a5 5 0 0 1 5-5z"
-  const IKON_BUKA =
+  const LOGO =
     `<svg class="logo" viewBox="0 0 32 32" aria-hidden="true" focusable="false">` +
     `<path fill="#171717" transform="translate(3.5 3.5)" d="${BALON}"></path>` +
     `<path fill="#fff" stroke="#171717" stroke-width="2.4" stroke-linejoin="round" d="${BALON}"></path>` +
@@ -115,7 +132,24 @@
       outline-offset: 3px;
     }
 
-    /* Sama dengan <ChatLogo size={24} /> dan .launcher svg (24px) di portal. */
+    /* Sama dengan .maskotTengah di chat.module.css: yang ditengahkan badan
+       maskotnya, bukan seluruh gambar. */
+    .launcher .maskot {
+      display: block;
+      width: 50px;
+      height: 50px;
+      transform: translate(1px, -7px);
+    }
+
+    .launcher .maskot img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      user-select: none;
+    }
+
+    /* Chevron, dan logo cadangan pengganti maskot; 24px seperti .launcher svg
+       di portal. */
     .launcher svg {
       width: 24px;
       height: 24px;
@@ -129,7 +163,7 @@
       stroke-linejoin: round;
     }
 
-    /* Sama dengan .launcherIcon di chat.module.css: logo dan chevron
+    /* Sama dengan .launcherIcon di chat.module.css: maskot dan chevron
        bertumpuk, pergantiannya berputar searah jarum jam sambil memudar. */
     .icon {
       display: grid;
@@ -259,17 +293,51 @@
   const frame = root.querySelector(".frame")
   const launcher = root.querySelector(".launcher")
   const label = root.querySelector(".label")
+  // Maskot ditolak CSP situs penyemat atau gagal diunduh: tombolnya memakai
+  // logo, bukan lingkaran merah kosong. Pendengarnya terpasang sebelum event
+  // `error` sempat terjadi -- pemuatan gambar selalu selesai di tugas lain.
+  const maskot = root.querySelector(".maskot")
+  maskot.querySelector("img").addEventListener("error", () => (maskot.outerHTML = LOGO), {
+    once: true,
+  })
   let iframe = null
   let open = false
   // Panel terakhir dibuka lewat papan ketik (Enter/Spasi di tombol), bukan klik.
   // Panel memakainya untuk cincin fokus ubin topik (embedded-chat.tsx).
   let lewatPapanKetik = false
+  // Tombol sedang diarahkan penunjuk / difokus. Hanya tombolnya sendiri yang
+  // dipantau, bukan aktivitas di halaman penyemat.
+  let diarahkan = false
+  let difokus = false
+  let ekspresiTombol = "netral"
+  let timerNgantuk = null
 
   function render() {
     launcher.setAttribute("aria-expanded", String(open))
     // Kedua ikon selalu terpasang; kelas ini yang menukar (dan menganimasikan) keduanya.
     launcher.classList.toggle("open", open)
     label.textContent = open ? "Tutup" : "Tanya Asisten"
+    aturMaskot()
+  }
+
+  /**
+   * Tombol yang lama tidak disentuh -- panel tertutup, tidak diarahkan, tidak
+   * difokus -- berganti ke maskot mengantuk; disentuh lagi, ia bangun.
+   */
+  function aturMaskot() {
+    clearTimeout(timerNgantuk)
+    if (open || diarahkan || difokus) gantiMaskot("netral")
+    else timerNgantuk = setTimeout(() => gantiMaskot("ngantuk"), NGANTUK_SETELAH)
+  }
+
+  function gantiMaskot(ekspresi) {
+    // Sudah diganti logo cadangan (gambar ditolak): tidak ada yang diganti.
+    const picture = root.querySelector(".launcher picture.maskot")
+    if (!picture || ekspresi === ekspresiTombol) return
+    ekspresiTombol = ekspresi
+    // Gambar lama tetap tampil sampai yang baru selesai dimuat.
+    picture.querySelector("source").srcset = maskotUrl(ekspresi, true)
+    picture.querySelector("img").src = maskotUrl(ekspresi)
   }
 
   /**
@@ -305,6 +373,24 @@
 
   // `detail` 0 = klik yang dipicu papan ketik (Enter/Spasi), bukan penunjuk.
   launcher.addEventListener("click", (event) => setOpen(!open, false, event.detail === 0))
+  for (const [nama, arah] of [
+    ["pointerenter", true],
+    ["pointerleave", false],
+  ]) {
+    launcher.addEventListener(nama, () => {
+      diarahkan = arah
+      aturMaskot()
+    })
+  }
+  for (const [nama, fokus] of [
+    ["focus", true],
+    ["blur", false],
+  ]) {
+    launcher.addEventListener(nama, () => {
+      difokus = fokus
+      aturMaskot()
+    })
+  }
 
   window.addEventListener("message", (event) => {
     if (!iframe || event.source !== iframe.contentWindow || event.origin !== ASAL) return

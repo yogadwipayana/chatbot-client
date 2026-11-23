@@ -28,14 +28,16 @@ Contoh yang bisa langsung dijalankan: [`index.html`](index.html) — lihat
    `</body>` — di setiap halaman yang ingin menampilkan asisten, atau sekali di
    template/layout situs.
 3. Bila situs Anda punya Content Security Policy sendiri, izinkan domain portal
-   di `script-src` dan `frame-src`:
+   di `script-src`, `frame-src`, dan `img-src`:
 
    ```text
-   Content-Security-Policy: script-src 'self' https://<domain-portal>; frame-src https://<domain-portal>
+   Content-Security-Policy: script-src 'self' https://<domain-portal>; frame-src https://<domain-portal>; img-src 'self' https://<domain-portal>
    ```
 
+   `img-src` untuk maskot di tombol (`/maskot/*.webp`). Tanpanya tombol
+   tetap berfungsi, tetapi memakai logo balon sebagai gantinya.
    `style-src` tidak perlu diubah.
-4. Muat ulang halaman. Tombol bulat merah berlogo asisten muncul di pojok
+4. Muat ulang halaman. Tombol bulat merah bermaskot asisten muncul di pojok
    kanan bawah.
 
 Pengunjung mendapat asisten yang sama persis dengan widget di portal: jawaban
@@ -273,7 +275,7 @@ cd client/docs && python -m http.server 5500
 
 Buat kunci di dashboard admin → **Sematan**, dengan `http://localhost:5500`
 di daftar domainnya (atau biarkan kosong). Lalu buka
-`http://localhost:5500/?key=emb_...` dan tekan tombol bulat berlogo asisten. Halaman contoh
+`http://localhost:5500/?key=emb_...` dan tekan tombol bulat bermaskot asisten. Halaman contoh
 memasang baris `<script>` dari `?key=` itu; alamat portal di `index.html` ditulis
 `http://localhost:3001`, ganti bila portal berjalan di tempat lain.
 

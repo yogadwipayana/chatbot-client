@@ -19,6 +19,7 @@ import { potongKontak } from "@/lib/kontak"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
+import { Maskot } from "./chat-maskot"
 import { potongBlok, potongMarkdown } from "./markdown"
 import type { ChatEntry, FeedbackControls, NoteState } from "./use-chat"
 
@@ -90,14 +91,12 @@ export function AssistantMessage({
   /** Lihat `BotBubble`: true hanya untuk balasan terakhir. */
   meta: boolean
 }) {
+  // Maskot berpikir (titik-titik pikiran lalu lampu menyala) menggantikan tiga
+  // titik berkedip; tahap pencariannya tetap tertulis di sebelahnya.
   if (entry.state === "pending") {
     return (
       <BotBubble tone="pending" meta={meta}>
-        <span className={styles.dots} aria-hidden>
-          <span />
-          <span />
-          <span />
-        </span>
+        <Maskot ekspresi="dapat-ide" ukuran={45} className={styles.maskotGelembung} />
         {entry.stage ? `${capitalize(entry.stage)}…` : <span className="sr-only">Menunggu balasan</span>}
       </BotBubble>
     )
@@ -181,6 +180,7 @@ export function AssistantMessage({
     </BotBubble>
   )
 }
+
 
 const URL_HTTP = /https?:\/\/[^\s<>"'`]+/gi
 
