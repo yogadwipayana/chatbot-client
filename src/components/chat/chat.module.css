@@ -521,7 +521,8 @@
 }
 
 /* Sorotan temuan (`chat-search.tsx`). Teksnya digelapkan: di gelembung
-   mahasiswa yang merah, teks putih di atas kuning tidak terbaca. */
+   mahasiswa yang merah, teks putih di atas kuning tidak terbaca. Nama di
+   `::highlight()` ikut di-scope CSS Modules; JS memakai `styles["asisten-cari"]`. */
 .messages ::highlight(asisten-cari) {
   background-color: #ffe58a;
   color: #333;

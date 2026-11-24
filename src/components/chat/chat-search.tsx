@@ -5,9 +5,15 @@ import { FaChevronDown, FaChevronUp, FaSearch, FaTimes } from "react-icons/fa"
 
 import styles from "./chat.module.css"
 
-/** Nama sorotan di `CSS.highlights`; gayanya `::highlight(...)` di chat.module.css. */
-const SOROT = "asisten-cari"
-const SOROT_AKTIF = "asisten-cari-aktif"
+/**
+ * Nama sorotan di `CSS.highlights`; gayanya `::highlight(...)` di chat.module.css.
+ * Diambil dari modul CSS, bukan ditulis langsung: CSS Modules ikut men-scope
+ * nama di dalam `::highlight()` (dev `chat-module__…__asisten-cari`, build
+ * `…_asisten-cari`), jadi nama polos tidak pernah cocok dan temuannya tidak
+ * berwarna.
+ */
+const SOROT = styles["asisten-cari"]
+const SOROT_AKTIF = styles["asisten-cari-aktif"]
 
 /**
  * "Cari percakapan" dari menu panel, seperti widget Glide (docs/glide.md,
@@ -84,7 +90,19 @@ export function CariPercakapan({
   }
 
   return (
-    <div className={styles.search} role="search">
+    <div
+      className={styles.search}
+      role="search"
+      onKeyDown={(event) => {
+        // Escape di mana pun di baris pencarian -- kotak teks, ▲/▼, ✕ --
+        // menutup pencarian saja, bukan seluruh panel. Setelah ▲/▼ diklik,
+        // fokusnya ada di tombol itu, bukan di kotak teks.
+        if (event.key !== "Escape") return
+        event.preventDefault()
+        event.stopPropagation()
+        onClose()
+      }}
+    >
       <div className={styles.searchBox}>
         <FaSearch aria-hidden className={styles.searchIcon} />
         <label htmlFor={id} className="sr-only">
@@ -104,11 +122,6 @@ export function CariPercakapan({
             if (event.key === "Enter") {
               event.preventDefault()
               pindah(event.shiftKey ? -1 : 1)
-            } else if (event.key === "Escape") {
-              // Escape di sini menutup pencarian saja, bukan seluruh panel.
-              event.preventDefault()
-              event.stopPropagation()
-              onClose()
             }
           }}
           placeholder="Cari di percakapan"
