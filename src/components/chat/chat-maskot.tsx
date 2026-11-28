@@ -19,7 +19,7 @@ import type { ChatEntry } from "./use-chat"
  * karena tombol itu digambar di halaman penyemat.
  */
 /** Durasi (ms) satu putaran berkas WebP, dicetak oleh `buat-maskot.mjs`. */
-const DURASI = {
+export const DURASI = {
   "idle-breathing": 3150,
   "idle-blink": 3600,
   "idle-curious": 4500,
@@ -40,13 +40,6 @@ export type Ekspresi = keyof typeof DURASI
  * di `public/embed.js`.
  */
 const VERSI_MASKOT = "20261127-2"
-
-/**
- * Tombol pembuka yang tidak disentuh (tidak diarahkan, tidak difokus, panel
- * tertutup) selama ini berganti ke idle wobble. Sama dengan
- * `IDLE_SETELAH` di `public/embed.js`.
- */
-export const IDLE_SETELAH = 60_000
 
 export function Maskot({
   ekspresi,

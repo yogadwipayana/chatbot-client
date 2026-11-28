@@ -7,31 +7,32 @@ import { nimLoginSads } from "@/lib/sads"
 import { cx } from "@/lib/utils"
 
 import styles from "./chat.module.css"
-import { IDLE_SETELAH, Maskot } from "./chat-maskot"
+import { DURASI, Maskot } from "./chat-maskot"
 import { ChatPanel, PANEL_ID } from "./chat-panel"
+
+const AJAKAN = ["Ada yang ingin ditanyakan?", "Butuh bantuan?", "Mau tanya soal kampus?"]
+const EKSPRESI_IDLE = ["idle-blink", "idle-curious", "idle-wobble"] as const
 
 /**
  * Asisten administrasi yang mengambang di pojok portal (FE-1..FE-6).
  *
- * Situs lain mendapat tombol dan panel yang sama lewat `public/embed.js`.
+ * Situs lain memasang tombolnya lewat `public/embed.js`.
  */
 export function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [nimSads, setNimSads] = useState<string | null>(null)
+  const [idle, setIdle] = useState<(typeof EKSPRESI_IDLE)[number]>("idle-blink")
   // Di layar sempit panelnya sudah selebar layar (media query di
   // chat.module.css), jadi "Perluas jendela" tidak ditawarkan.
   const layarLebar = useSyncExternalStore(pantauLayarLebar, layarLebarSekarang, () => true)
-  // Tombol yang lama tidak disentuh berganti dari kedipan ke goyangan.
-  const [diarahkan, setDiarahkan] = useState(false)
-  const [difokus, setDifokus] = useState(false)
-  const [idleLama, setIdleLama] = useState(false)
-  const aktif = open || diarahkan || difokus
-  if (aktif && idleLama) setIdleLama(false)
   useEffect(() => {
-    if (aktif) return
-    const timer = setTimeout(() => setIdleLama(true), IDLE_SETELAH)
+    if (open) return
+    const timer = setTimeout(() => {
+      const pilihan = EKSPRESI_IDLE.filter((ekspresi) => ekspresi !== idle)
+      setIdle(pilihan[Math.floor(Math.random() * pilihan.length)])
+    }, DURASI[idle])
     return () => clearTimeout(timer)
-  }, [aktif])
+  }, [idle, open])
 
   function toggle() {
     // Dibaca saat panel dibuka, bukan saat halaman dimuat: data login SADS
@@ -56,18 +57,23 @@ export function ChatWidget() {
         onClick={toggle}
         aria-expanded={open}
         aria-controls={PANEL_ID}
-        onPointerEnter={() => setDiarahkan(true)}
-        onPointerLeave={() => setDiarahkan(false)}
-        onFocus={() => setDifokus(true)}
-        onBlur={() => setDifokus(false)}
       >
         {/* Ikon maskot dan panah bertumpuk supaya pergantiannya bisa dianimasikan. */}
         <span className={cx(styles.launcherIcon, styles.launcherMaskot)} aria-hidden>
-          <Maskot ekspresi={idleLama ? "idle-wobble" : "idle-blink"} ukuran={50} />
+          <Maskot ekspresi={idle} ukuran={48} />
         </span>
         <span className={cx(styles.launcherIcon, styles.launcherChevron)} aria-hidden>
           <FiChevronDown />
         </span>
+        {!open && (
+          <span className={styles.launcherPrompts} aria-hidden>
+            {AJAKAN.map((teks) => (
+              <span key={teks} className={styles.launcherPrompt}>
+                {teks}
+              </span>
+            ))}
+          </span>
+        )}
         {/* Tombolnya hanya ikon; namanya tetap ada untuk pembaca layar. */}
         <span className="sr-only">{open ? "Tutup" : "Tanya Asisten"}</span>
       </button>

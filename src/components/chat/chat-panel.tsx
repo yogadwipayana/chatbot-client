@@ -336,7 +336,7 @@ export function ChatPanel({
           <h2 id={`${PANEL_ID}-judul`} className={styles.title}>
             Asisten Administrasi
           </h2>
-          <p className={styles.subtitle}>Menjawab dari dokumen resmi kampus</p>
+          <p className={styles.subtitle}>Media Informasi Resmi Kampus</p>
         </div>
         <MenuPanel
           id={`${PANEL_ID}-menu`}

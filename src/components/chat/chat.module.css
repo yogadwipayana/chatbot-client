@@ -7,9 +7,8 @@
    Tata letaknya meniru widget Intercom/Fin di Glide (docs/glide.md): gelembung
    tanpa avatar, keterangan "Asisten · AI" di bawah balasan terakhir, dan
    composer satu kotak dengan tombol kirim di dalamnya.
-   Ukuran, sudut, warna, dan bayangan .launcher dan .panel disalin ke .launcher
-   dan .frame di public/embed.js (CSS modul ini tidak sampai ke situs
-   penyemat): ubah keduanya bersamaan. */
+   Ukuran, sudut, dan bayangan panel juga dipakai oleh .frame di public/embed.js.
+   Tombol pembuka di portal memiliki tampilan sendiri. */
 
 .panel,
 .embedded {
@@ -36,8 +35,6 @@
 
 /* --- Tombol pembuka ------------------------------------------------------ */
 
-/* Bulat berisi ikon saja, seperti tombol widget Glide; teks "Tanya Asisten"
-   hanya untuk pembaca layar. */
 .launcher {
   position: fixed;
   right: 20px;
@@ -45,20 +42,34 @@
   z-index: 1040;
   display: grid;
   place-items: center;
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--red);
-  color: #fff;
+  background: transparent;
+  color: #1d2433;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.launcher::before {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  border-radius: inherit;
+  background:
+    radial-gradient(ellipse at 28% 8%, rgba(255, 255, 255, 0.92), transparent 58%),
+    radial-gradient(ellipse at 82% 100%, rgba(208, 225, 248, 0.7), transparent 60%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.64), rgba(235, 241, 252, 0.26));
   box-shadow:
-    0 2px 6px rgba(16, 24, 40, 0.14),
-    0 8px 24px rgba(194, 51, 33, 0.3);
-  transition:
-    background-color 0.15s,
-    box-shadow 0.2s,
-    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    inset 0 1px 3px rgba(255, 255, 255, 0.9),
+    inset 0 -4px 12px rgba(104, 132, 172, 0.16),
+    0 0 0 1px rgba(111, 129, 156, 0.2),
+    0 6px 16px rgba(26, 42, 68, 0.18);
+  backdrop-filter: blur(14px) saturate(1.5);
+  content: "";
+  pointer-events: none;
 }
 
 .launcher svg {
@@ -69,6 +80,7 @@
    keluar searah jarum jam sambil mengecil dan memudar, dan chevron menyusul
    masuk dengan putaran yang sama; saat ditutup gerakannya berbalik. */
 .launcherIcon {
+  position: relative;
   display: grid;
   grid-area: 1 / 1;
   place-items: center;
@@ -79,6 +91,7 @@
 
 .launcherMaskot .maskot {
   transform: translateY(-2px);
+  filter: drop-shadow(0 3px 4px rgba(16, 24, 40, 0.18));
 }
 
 .launcherChevron,
@@ -100,16 +113,77 @@
 }
 
 .launcher:hover {
-  background: var(--red-dark);
-  box-shadow:
-    0 4px 10px rgba(16, 24, 40, 0.16),
-    0 12px 28px rgba(194, 51, 33, 0.36);
   transform: scale(1.05);
 }
 
 .launcher:focus-visible {
   outline: 3px solid rgba(221, 75, 57, 0.4);
   outline-offset: 3px;
+}
+
+.launcherPrompts {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 14px);
+  display: grid;
+  align-items: center;
+  justify-items: end;
+  width: max-content;
+  max-width: calc(100vw - 98px);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.launcherPrompt {
+  position: relative;
+  grid-area: 1 / 1;
+  padding: 7px 12px;
+  border: 1px solid #e4e7ec;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgba(16, 24, 40, 0.12);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: left;
+  animation: tampilAjakan 24s linear infinite both;
+}
+
+.launcherPrompt::after {
+  position: absolute;
+  top: calc(50% - 4px);
+  right: -5px;
+  width: 8px;
+  height: 8px;
+  border-top: 1px solid #e4e7ec;
+  border-right: 1px solid #e4e7ec;
+  background: inherit;
+  content: "";
+  transform: rotate(45deg);
+}
+
+.launcherPrompt:nth-child(2) {
+  animation-delay: 8s;
+}
+
+.launcherPrompt:nth-child(3) {
+  animation-delay: 16s;
+}
+
+@keyframes tampilAjakan {
+  0%,
+  8%,
+  25%,
+  100% {
+    opacity: 0;
+    transform: translateX(3px);
+  }
+
+  9%,
+  24% {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* --- Kerangka panel ------------------------------------------------------ */
@@ -1674,6 +1748,14 @@ ol.list {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .launcherPrompt {
+    animation: none;
+  }
+
+  .launcherPrompt:not(:first-child) {
+    display: none;
+  }
+
   .caret,
   .spinner {
     animation: none;

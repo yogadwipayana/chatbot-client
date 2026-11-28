@@ -6,10 +6,10 @@ Widget memakai WebP transparan dari `public/maskot/`. Komponennya ada di
 
 | GIF sumber | Pemakaian |
 |---|---|
-| `idle_blink.gif` | Tombol pembuka |
+| `idle_blink.gif` | Rotasi tombol portal dan animasi awal tombol sematan |
 | `idle_breathing.gif` | Kepala panel saat idle |
-| `idle_curious.gif` | Kepala panel saat dibuka |
-| `idle_wobble.gif` | Tombol setelah 60 detik tanpa interaksi dan pembuka percakapan baru |
+| `idle_curious.gif` | Rotasi tombol portal dan kepala panel saat dibuka |
+| `idle_wobble.gif` | Rotasi tombol portal, tombol sematan setelah 60 detik idle, dan pembuka percakapan baru |
 | `searching_multi_action.gif` | Gelembung selama menunggu jawaban |
 | `success.gif` | Jawaban berhasil dan penilaian membantu |
 | `no_answer_confused_sad.gif` | Balasan saat chatbot belum menemukan jawaban |
@@ -19,6 +19,8 @@ Widget memakai WebP transparan dari `public/maskot/`. Komponennya ada di
 Setiap ekspresi memiliki WebP animasi 128 × 128 dengan jeda frame sesuai GIF
 sumber dan versi `-diam.webp` untuk `prefers-reduced-motion`. Reaksi kepala
 panel kembali ke idle sesudah diputar.
+Saat panel portal tertutup, tombol memilih secara acak satu dari dua ekspresi
+idle lainnya setelah durasi animasi yang sedang tampil.
 Tombol pada situs penyemat dimuat oleh `public/embed.js` dari asal portal.
 
 ## Membuat ulang aset

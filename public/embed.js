@@ -60,7 +60,6 @@
     `<source media="(prefers-reduced-motion: reduce)" srcset="${maskotUrl("idle-blink", true)}">` +
     `<img src="${maskotUrl("idle-blink")}" alt="" width="50" height="50" draggable="false">` +
     `</picture>`
-  // Sama dengan IDLE_SETELAH di src/components/chat/chat-maskot.tsx.
   const IDLE_SETELAH = 60000
   // Cadangan bila situs penyemat menolak gambar dari asal portal (CSP
   // `img-src`): logo balon asisten (`balon-bayangan`, docs/logo/README.md), yang

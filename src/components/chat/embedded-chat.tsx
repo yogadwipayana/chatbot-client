@@ -124,7 +124,7 @@ export function EmbedUnavailable({ status }: { status: "tidak-berlaku" | "gagal"
           <h2 id="asisten-tidak-tersedia" className={styles.title}>
             Asisten Administrasi
           </h2>
-          <p className={styles.subtitle}>Menjawab dari dokumen resmi kampus</p>
+          <p className={styles.subtitle}>Media Informasi Resmi Kampus</p>
         </div>
       </header>
       <div className={styles.messages} role="alert">
