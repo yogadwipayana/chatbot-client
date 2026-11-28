@@ -6,8 +6,7 @@ import styles from "./chat.module.css"
 import type { ChatEntry } from "./use-chat"
 
 /**
- * Maskot asisten: gumpalan putih bergaris tepi gelap, pengganti logo balon
- * sejak 2026-11-23. Asetnya WebP animasi di `public/maskot/`, dibuat dari GIF
+ * Maskot asisten: slime merah. Asetnya WebP animasi di `public/maskot/`, dibuat dari GIF
  * asli oleh `docs/maskot/buat-maskot.mjs`; asal-usul, tempat setiap ekspresi,
  * dan cara menambah ekspresi ada di `docs/maskot/README.md`.
  *
@@ -16,20 +15,23 @@ import type { ChatEntry } from "./use-chat"
  *
  * Panel `/embed` di situs lain (`public/embed.js`) adalah halaman portal ini
  * di dalam iframe, jadi maskot di panel ikut tampil di sana tanpa disalin.
- * Maskot tombol pembuka disalin di `embed.js` (`IKON_BUKA`, `aturMaskot`),
+ * Maskot tombol pembuka disalin di `embed.js`,
  * karena tombol itu digambar di halaman penyemat.
  */
-export type Ekspresi =
-  | "netral"
-  | "ngantuk"
-  | "dapat-ide"
-  | "bingung"
-  | "senang"
-  | "melambai"
-  | "pusing"
-  | "selamat-tinggal"
-  | "bonus-like"
-  | "bonus-dislike"
+/** Durasi (ms) satu putaran berkas WebP, dicetak oleh `buat-maskot.mjs`. */
+const DURASI = {
+  "idle-breathing": 3150,
+  "idle-blink": 3600,
+  "idle-curious": 4500,
+  "idle-wobble": 2520,
+  "searching-multi-action": 7200,
+  confused: 3150,
+  "no-answer-confused-sad": 6750,
+  sad: 2340,
+  success: 2250,
+}
+
+export type Ekspresi = keyof typeof DURASI
 
 /**
  * Versi aset `public/maskot/`, ikut di URL-nya (`?v=`): asetnya disimpan
@@ -37,17 +39,14 @@ export type Ekspresi =
  * `docs/maskot/buat-maskot.mjs` dijalankan ulang. Sama dengan `VERSI_MASKOT`
  * di `public/embed.js`.
  */
-const VERSI_MASKOT = "20261123"
-
-/** Satu putaran animasi setiap ekspresi: 38 frame x 80 ms. */
-export const SATU_PUTARAN = 3040
+const VERSI_MASKOT = "20261127-2"
 
 /**
  * Tombol pembuka yang tidak disentuh (tidak diarahkan, tidak difokus, panel
- * tertutup) selama ini berganti ke maskot mengantuk. Sama dengan
- * `NGANTUK_SETELAH` di `public/embed.js`.
+ * tertutup) selama ini berganti ke idle wobble. Sama dengan
+ * `IDLE_SETELAH` di `public/embed.js`.
  */
-export const NGANTUK_SETELAH = 60_000
+export const IDLE_SETELAH = 60_000
 
 export function Maskot({
   ekspresi,
@@ -63,7 +62,7 @@ export function Maskot({
   const frameDiam = `/maskot/${ekspresi}-diam.webp?v=${VERSI_MASKOT}`
   return (
     // `alt=""` sudah menyembunyikannya dari pembaca layar.
-    <picture className={cx(styles.maskot, className)}>
+    <picture className={cx(styles.maskot, className)} style={{ width: ukuran, height: ukuran }}>
       {/* Pengguna yang meminta gerakan dikurangi mendapat frame diamnya. */}
       <source media="(prefers-reduced-motion: reduce)" srcSet={frameDiam} />
       {/* `lazy`: panel portal terpasang tersembunyi di setiap halaman; aset
@@ -89,41 +88,30 @@ export function Maskot({
  */
 export type Reaksi = { ke: number; antrean: Ekspresi[] }
 
-/**
- * Ekspresi kepala panel untuk balasan yang baru selesai (keputusan user
- * 2026-11-23: di percakapan maskot hanya ada di gelembung menunggu; situasi
- * jawaban ditunjukkan maskot kepala panel). null = tetap netral: jawaban
- * dokumen biasa (keputusan user: wajah senang di atas kabar buruk -- tunggakan,
- * sanksi -- terasa janggal), balasan dukungan untuk mahasiswa yang sedang
- * tertekan, dan jawaban yang dihentikan.
- */
+/** Reaksi kepala panel setelah balasan. `null` mengembalikan maskot ke idle. */
 export function ekspresiBalasan(entry: ChatEntry): Ekspresi | null {
   if (entry.role !== "assistant") return null
-  if (entry.state === "error") return "pusing"
+  if (entry.state === "error") return "sad"
   if (entry.state !== "done") return null
   const { response, complete } = entry.reply
-  // Koneksi terputus di tengah jawaban.
-  if (!complete) return "pusing"
-  if (response.kind === "smalltalk") return "senang"
-  if (response.kind === "refusal" || response.kind === "rejected") return "bingung"
+  if (!complete) return "sad"
+  if (response.kind === "refusal") return "no-answer-confused-sad"
+  if (response.kind === "rejected") return "confused"
+  if (response.kind === "answer") return "success"
   return null
 }
 
 /**
  * Maskot di kepala panel, di sebelah "Asisten Administrasi". Setiap ekspresi
- * di antrean diputar satu putaran, lalu kembali netral:
- * - panel dibuka: melambai;
- * - `reaksi` baru dari `ChatPanel`: situasi jawaban (`ekspresiBalasan`),
- *   👍/👎, atau "Percakapan baru" (selamat tinggal untuk percakapan lama, lalu
- *   melambai menyambut yang baru).
+ * di antrean diputar satu putaran sebelum kembali ke idle breathing.
  */
 export function MaskotKepala({ open, reaksi }: { open: boolean; reaksi: Reaksi }) {
-  const [antrean, setAntrean] = useState<Ekspresi[]>(open ? ["melambai"] : [])
+  const [antrean, setAntrean] = useState<Ekspresi[]>(open ? ["idle-curious"] : [])
   const [openSebelumnya, setOpenSebelumnya] = useState(open)
   const [reaksiSebelumnya, setReaksiSebelumnya] = useState(reaksi.ke)
   if (open !== openSebelumnya) {
     setOpenSebelumnya(open)
-    if (open) setAntrean(["melambai"])
+    if (open) setAntrean(["idle-curious"])
   }
   if (reaksi.ke !== reaksiSebelumnya) {
     setReaksiSebelumnya(reaksi.ke)
@@ -131,23 +119,24 @@ export function MaskotKepala({ open, reaksi }: { open: boolean; reaksi: Reaksi }
   }
 
   useEffect(() => {
-    if (antrean.length === 0) return
-    const timer = setTimeout(() => setAntrean((sisa) => sisa.slice(1)), SATU_PUTARAN)
+    const [ekspresi] = antrean
+    if (!open || !ekspresi) return
+    const timer = setTimeout(() => setAntrean((sisa) => sisa.slice(1)), DURASI[ekspresi])
     return () => clearTimeout(timer)
-  }, [antrean])
+  }, [antrean, open])
 
   return (
     <span className={styles.headerMaskot} aria-hidden>
-      <Maskot ekspresi={antrean[0] ?? "netral"} ukuran={50} className={styles.maskotTengah} />
+      <Maskot ekspresi={antrean[0] ?? "idle-breathing"} ukuran={50} />
     </span>
   )
 }
 
-/** Kepala panel pengganti (`EmbedUnavailable`): netral, tanpa lambaian. */
+/** Kepala panel pengganti (`EmbedUnavailable`). */
 export function MaskotKepalaDiam() {
   return (
     <span className={styles.headerMaskot} aria-hidden>
-      <Maskot ekspresi="netral" ukuran={50} className={styles.maskotTengah} />
+      <Maskot ekspresi="idle-breathing" ukuran={50} />
     </span>
   )
 }

@@ -77,6 +77,10 @@
     transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.launcherMaskot .maskot {
+  transform: translateY(-2px);
+}
+
 .launcherChevron,
 .launcherOpen .launcherMaskot {
   opacity: 0;
@@ -215,10 +219,7 @@
   color: #fff;
 }
 
-/* Maskot di sebelah judul (`MaskotKepala`, pengganti logo balon sejak
-   2026-11-23), langsung di atas merah seperti di tombol pembuka. Kotaknya 50px
-   seukuran gambar, tetapi margin negatifnya membuatnya hanya memakan 36px di
-   baris kepala; tangan yang melambai masih muat sebelum judul. */
+/* Kotak 50px memuat ekspresi maskot dan menyisakan ruang bagi judul. */
 .headerMaskot {
   display: grid;
   flex: none;
@@ -910,26 +911,11 @@ ol.list {
   user-select: none;
 }
 
-/* Ukuran di bawah dipilih supaya badan maskot sekitar dua pertiga ukuran
-   gambarnya: setiap gambar menyisakan ruang di sekeliling badan untuk tangan,
-   lampu, zzz, tanda tanya, dan lubang "selamat tinggal".
-
-   Tombol pembuka dan kepala panel: yang ditengahkan adalah badannya (pusatnya
-   di 49% x 65% gambar, docs/maskot/README.md), bukan gambarnya.
-   Salinannya: .launcher .maskot di public/embed.js. */
-.maskotTengah {
-  width: 50px;
-  height: 50px;
-  transform: translate(1px, -7px);
-}
-
 /* Satu-satunya maskot di percakapan: gelembung menunggu (keputusan user
    2026-11-23; situasi jawaban lainnya ditunjukkan maskot kepala panel).
    Margin negatif supaya gelembungnya tidak lebih tinggi daripada gelembung
    satu baris. */
 .maskotGelembung {
-  width: 45px;
-  height: 45px;
   margin: -10px -4px -10px -8px;
 }
 

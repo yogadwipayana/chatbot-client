@@ -91,12 +91,11 @@ export function AssistantMessage({
   /** Lihat `BotBubble`: true hanya untuk balasan terakhir. */
   meta: boolean
 }) {
-  // Maskot berpikir (titik-titik pikiran lalu lampu menyala) menggantikan tiga
-  // titik berkedip; tahap pencariannya tetap tertulis di sebelahnya.
+  // Animasi pencarian menemani status di gelembung menunggu.
   if (entry.state === "pending") {
     return (
       <BotBubble tone="pending" meta={meta}>
-        <Maskot ekspresi="dapat-ide" ukuran={45} className={styles.maskotGelembung} />
+        <Maskot ekspresi="searching-multi-action" ukuran={45} className={styles.maskotGelembung} />
         {entry.stage ? `${capitalize(entry.stage)}…` : <span className="sr-only">Menunggu balasan</span>}
       </BotBubble>
     )

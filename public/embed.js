@@ -48,22 +48,20 @@
   const PESAN_IDENTITAS = "asisten:identitas"
   const PESAN_PERLUAS = "asisten:perluas"
 
-  // Maskot di tombol, sama dengan tombol portal (chat-widget.tsx): netral, atau
-  // mengantuk bila tombolnya lama tidak disentuh (`aturMaskot`). Diunduh dari
-  // asal portal (docs/maskot/README.md). `alt` kosong: nama tombolnya ada di
-  // .label.
+  // Seperti tombol portal, maskot berkedip lalu bergoyang ketika idle.
+  // `alt` kosong karena nama tombol ada di .label.
   // Sama dengan VERSI_MASKOT di src/components/chat/chat-maskot.tsx: asetnya
   // disimpan peramban seminggu, jadi versinya naik setiap kali aset dibuat ulang.
-  const VERSI_MASKOT = "20261123"
+  const VERSI_MASKOT = "20261127-2"
   const maskotUrl = (ekspresi, diam) =>
     `${ASAL}/maskot/${ekspresi}${diam ? "-diam" : ""}.webp?v=${VERSI_MASKOT}`
   const IKON_BUKA =
     `<picture class="maskot">` +
-    `<source media="(prefers-reduced-motion: reduce)" srcset="${maskotUrl("netral", true)}">` +
-    `<img src="${maskotUrl("netral")}" alt="" width="50" height="50" draggable="false">` +
+    `<source media="(prefers-reduced-motion: reduce)" srcset="${maskotUrl("idle-blink", true)}">` +
+    `<img src="${maskotUrl("idle-blink")}" alt="" width="50" height="50" draggable="false">` +
     `</picture>`
-  // Sama dengan NGANTUK_SETELAH di src/components/chat/chat-maskot.tsx.
-  const NGANTUK_SETELAH = 60000
+  // Sama dengan IDLE_SETELAH di src/components/chat/chat-maskot.tsx.
+  const IDLE_SETELAH = 60000
   // Cadangan bila situs penyemat menolak gambar dari asal portal (CSP
   // `img-src`): logo balon asisten (`balon-bayangan`, docs/logo/README.md), yang
   // di portal sudah digantikan maskot sejak 2026-11-23.
@@ -132,13 +130,12 @@
       outline-offset: 3px;
     }
 
-    /* Sama dengan .maskotTengah di chat.module.css: yang ditengahkan badan
-       maskotnya, bukan seluruh gambar. */
+    /* Sama dengan ukuran gambar tombol di chat-widget.tsx. */
     .launcher .maskot {
       display: block;
       width: 50px;
       height: 50px;
-      transform: translate(1px, -7px);
+      transform: translateY(-2px);
     }
 
     .launcher .maskot img {
@@ -309,8 +306,8 @@
   // dipantau, bukan aktivitas di halaman penyemat.
   let diarahkan = false
   let difokus = false
-  let ekspresiTombol = "netral"
-  let timerNgantuk = null
+  let ekspresiTombol = "idle-blink"
+  let timerIdle = null
 
   function render() {
     launcher.setAttribute("aria-expanded", String(open))
@@ -322,12 +319,12 @@
 
   /**
    * Tombol yang lama tidak disentuh -- panel tertutup, tidak diarahkan, tidak
-   * difokus -- berganti ke maskot mengantuk; disentuh lagi, ia bangun.
+   * difokus -- berganti ke idle wobble.
    */
   function aturMaskot() {
-    clearTimeout(timerNgantuk)
-    if (open || diarahkan || difokus) gantiMaskot("netral")
-    else timerNgantuk = setTimeout(() => gantiMaskot("ngantuk"), NGANTUK_SETELAH)
+    clearTimeout(timerIdle)
+    if (open || diarahkan || difokus) gantiMaskot("idle-blink")
+    else timerIdle = setTimeout(() => gantiMaskot("idle-wobble"), IDLE_SETELAH)
   }
 
   function gantiMaskot(ekspresi) {

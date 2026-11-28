@@ -135,18 +135,17 @@ export function ChatPanel({
   // menanyakan sesuatu yang sudah tidak diingat mahasiswa.
   const [konfirmasiBaru, setKonfirmasiBaru] = useState(false)
   // Reaksi maskot kepala panel (`MaskotKepala`): situasi jawaban terakhir,
-  // 👍/👎, dan "Percakapan baru". Di percakapan sendiri maskot hanya ada di
-  // gelembung menunggu (keputusan user 2026-11-23).
+  // 👍/👎, dan "Percakapan baru". Gelembung menunggu punya ekspresi berpikir.
   const [reaksi, setReaksi] = useState<Reaksi>({ ke: 0, antrean: [] })
   function picu(antrean: Ekspresi[]) {
     setReaksi((sebelumnya) => ({ ke: sebelumnya.ke + 1, antrean }))
   }
   // Balasan terakhir, sekali per tahapnya. Pertanyaan baru (menunggu atau
-  // mengalir) mengembalikan kepala panel ke netral -- berpikirnya sudah tampak
+  // mengalir) mengembalikan kepala panel ke idle -- berpikirnya sudah tampak
   // di gelembung. Balasan yang selesai memutar ekspresinya dua putaran, supaya
   // sempat terlihat selagi jawabannya mulai dibaca; tanpa ekspresi (dukungan,
-  // dihentikan), netral. Percakapan kosong tidak memicu apa-apa: pamitan
-  // "Percakapan baru" tidak boleh tertimpa.
+  // dihentikan), idle. Percakapan kosong mempertahankan animasi pembuka
+  // dari "Percakapan baru".
   const akhir = entries.at(-1)
   const kunciAkhir =
     akhir?.role === "assistant"
@@ -163,7 +162,7 @@ export function ChatPanel({
   const penilaian: FeedbackControls = {
     ...feedback,
     rate: (messageId, helpful) => {
-      if (feedback.ratings[messageId] !== helpful) picu([helpful ? "bonus-like" : "bonus-dislike"])
+      if (feedback.ratings[messageId] !== helpful) picu([helpful ? "success" : "sad"])
       return feedback.rate(messageId, helpful)
     },
   }
@@ -311,7 +310,7 @@ export function ChatPanel({
   function percakapanBaru() {
     tutupKonfirmasi()
     reset()
-    picu(["selamat-tinggal", "melambai"])
+    picu(["idle-wobble", "idle-curious"])
     setDraft("")
     setMenuTerbuka(false)
     setCariTerbuka(false)
